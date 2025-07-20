@@ -661,7 +661,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 isWishlisted: provider.isWishlisted(pg.id),
                 onWishlistTap: () => provider.toggleWishlist(pg.id),
                 showDistance: true,
-                distance: pg.distanceFromCenter,
               );
             } else if (provider.isLoadingMore) {
               // Show loading indicator at the end

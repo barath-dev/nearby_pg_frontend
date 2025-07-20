@@ -408,10 +408,6 @@ class SearchProvider extends ChangeNotifier {
       }
 
       // Meals filter
-      if (filters.mealsIncluded != null &&
-          pg.mealsIncluded != filters.mealsIncluded) {
-        return false;
-      }
 
       // Rating filter
       if (filters.minRating != null && pg.rating < filters.minRating!) {

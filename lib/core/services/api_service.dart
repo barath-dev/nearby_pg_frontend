@@ -135,8 +135,7 @@ class ApiService {
   /// Handle errors from API requests
   Exception _handleError(dynamic error) {
     if (error is DioException) {
-      final errorMessage =
-          error.response?.data?['message'] ??
+      final errorMessage = error.response?.data?['message'] ??
           error.message ??
           'Network error occurred';
       debugPrint('API Error: $errorMessage');
@@ -198,7 +197,9 @@ class ApiService {
             index % 3 == 0 ? 'MALE' : (index % 3 == 1 ? 'FEMALE' : 'ANY'),
         'mealsIncluded': true,
         'isVerified': true,
+        'totalRooms': 1,
         'isFeatured': true,
+        'availableRooms': 1,
       },
     );
   }

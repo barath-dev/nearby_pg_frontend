@@ -42,7 +42,6 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
       longitude: 77.3261,
       price: 12000,
       securityDeposit: 24000,
-      distanceFromCenter: 3.5,
       rating: 4.5,
       reviewCount: 128,
       amenities: [
@@ -61,13 +60,10 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
         'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400',
       ],
       genderPreference: 'ANY',
-      mealsIncluded: true,
       roomTypes: ['SINGLE', 'DOUBLE'],
       occupationType: 'ANY',
       ownerName: 'Mr. Sharma',
       contactPhone: '9876543210',
-      checkInTime: '10:00 AM',
-      checkOutTime: '11:00 AM',
       description:
           'Premium PG with all modern amenities in prime location. This fully-furnished PG offers spacious rooms, nutritious meals, and a comfortable living environment with 24/7 security and power backup. Located in a prime location with easy access to public transportation, shopping malls, and restaurants.',
       houseRules: [

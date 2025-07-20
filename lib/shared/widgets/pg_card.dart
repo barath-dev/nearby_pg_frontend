@@ -76,15 +76,14 @@ class PGCard extends StatelessWidget {
         SizedBox(
           height: variant == PGCardVariant.compact ? 120 : 180,
           width: double.infinity,
-          child:
-              pgProperty.images.isNotEmpty
-                  ? CachedNetworkImage(
-                    imageUrl: pgProperty.images.first,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => _buildImagePlaceholder(),
-                    errorWidget: (context, url, error) => _buildImageError(),
-                  )
-                  : _buildImagePlaceholder(),
+          child: pgProperty.images.isNotEmpty
+              ? CachedNetworkImage(
+                  imageUrl: pgProperty.images.first,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => _buildImagePlaceholder(),
+                  errorWidget: (context, url, error) => _buildImageError(),
+                )
+              : _buildImagePlaceholder(),
         ),
 
         // Tags
@@ -110,9 +109,9 @@ class PGCard extends StatelessWidget {
                       Text(
                         'Verified',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                     ],
                   ),
@@ -136,9 +135,9 @@ class PGCard extends StatelessWidget {
                       Text(
                         'Featured',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.black87,
-                          fontWeight: FontWeight.bold,
-                        ),
+                              color: Colors.black87,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                     ],
                   ),
@@ -200,8 +199,8 @@ class PGCard extends StatelessWidget {
                   Text(
                     pgProperty.name,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -209,28 +208,6 @@ class PGCard extends StatelessWidget {
                   Row(
                     children: [
                       _buildGenderIndicator(context),
-                      if (pgProperty.mealsIncluded) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.lightMint,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Meals',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.labelSmall?.copyWith(
-                              color: AppTheme.emeraldGreen,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ],
@@ -247,9 +224,9 @@ class PGCard extends StatelessWidget {
               child: Text(
                 '₹${pgProperty.price.toStringAsFixed(0)}/mo',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppTheme.emeraldGreen,
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: AppTheme.emeraldGreen,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
             ),
           ],
@@ -284,9 +261,8 @@ class PGCard extends StatelessWidget {
                   itemCount: 5,
                   itemSize: 16,
                   ignoreGestures: true,
-                  itemBuilder:
-                      (context, _) =>
-                          const Icon(Icons.star, color: Colors.amber),
+                  itemBuilder: (context, _) =>
+                      const Icon(Icons.star, color: Colors.amber),
                   onRatingUpdate: (rating) {},
                 ),
                 const SizedBox(width: 4),
@@ -329,23 +305,22 @@ class PGCard extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children:
-                pgProperty.amenities.take(4).map((amenity) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      amenity,
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  );
-                }).toList(),
+            children: pgProperty.amenities.take(4).map((amenity) {
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  amenity,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              );
+            }).toList(),
           ),
         ],
 
@@ -408,9 +383,9 @@ class PGCard extends StatelessWidget {
           Text(
             text,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w500,
-            ),
+                  color: color,
+                  fontWeight: FontWeight.w500,
+                ),
           ),
         ],
       ),

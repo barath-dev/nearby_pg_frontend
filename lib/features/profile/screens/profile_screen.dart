@@ -1,16 +1,12 @@
-// lib/features/profile/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'dart:io';
+import 'package:shimmer/shimmer.dart';
 
-// Import providers and models
 import '../providers/profile_provider.dart';
 import '../../../shared/models/app_models.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/services/navigation_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -22,53 +18,33 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-  final ImagePicker _imagePicker = ImagePicker();
+  final ScrollController _scrollController = ScrollController();
+  bool _isScrolled = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _setupAnimations();
 
     // Initialize profile data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProfileProvider>().initialize();
     });
+
+    _scrollController.addListener(_onScroll);
   }
 
-  void _setupAnimations() {
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-      ),
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
-      ),
-    );
-
-    _animationController.forward();
+  void _onScroll() {
+    setState(() {
+      _isScrolled = _scrollController.offset > 10;
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _animationController.dispose();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -79,35 +55,25 @@ class _ProfileScreenState extends State<ProfileScreen>
       body: Consumer<ProfileProvider>(
         builder: (context, provider, child) {
           if (!provider.isAuthenticated) {
-            return _buildLoginPrompt();
+            return _buildLoginPrompt(context);
           }
 
           if (provider.isLoading && !provider.hasProfile) {
             return _buildLoadingState();
           }
 
-          return RefreshIndicator(
-            onRefresh: () => provider.refresh(),
-            color: AppTheme.emeraldGreen,
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                _buildSliverAppBar(provider),
-                SliverToBoxAdapter(
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SlideTransition(
-                      position: _slideAnimation,
-                      child: Column(
-                        children: [
-                          _buildProfileHeader(provider),
-                          _buildStatsCards(provider),
-                          _buildTabSection(provider),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+          return NestedScrollView(
+            controller: _scrollController,
+            headerSliverBuilder: (context, innerBoxIsScrolled) => [
+              _buildProfileHeader(provider),
+              _buildTabBar(),
+            ],
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildBookingsTab(provider),
+                _buildWishlistTab(provider),
+                _buildReviewsTab(provider),
               ],
             ),
           );
@@ -116,354 +82,185 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Build sliver app bar with profile actions
-  Widget _buildSliverAppBar(ProfileProvider provider) {
+  Widget _buildProfileHeader(ProfileProvider provider) {
+    final profile = provider.userProfile;
+    if (profile == null) return SliverToBoxAdapter(child: Container());
+
     return SliverAppBar(
-      backgroundColor: AppTheme.emeraldGreen,
-      expandedHeight: 120,
-      floating: true,
+      expandedHeight: 240.0,
+      floating: false,
       pinned: true,
-      elevation: 0,
-      flexibleSpace: FlexibleSpaceBar(
-        title: Text(
-          'Profile',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        centerTitle: false,
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: [
-                AppTheme.emeraldGreen.withOpacity(0.8),
-                AppTheme.emeraldGreen,
-              ],
-            ),
-          ),
-        ),
-      ),
+      elevation: _isScrolled ? 2 : 0,
+      backgroundColor: Colors.white,
       actions: [
         IconButton(
-          icon: const Icon(Icons.settings, color: Colors.white),
+          icon: const Icon(Icons.settings_outlined, color: AppTheme.gray600),
           onPressed: () => _showSettingsSheet(provider),
         ),
         IconButton(
-          icon: const Icon(Icons.edit, color: Colors.white),
-          onPressed: () => _navigateToEditProfile(provider),
+          icon: const Icon(Icons.edit_outlined, color: AppTheme.gray600),
+          onPressed: () => _showEditProfileSheet(provider),
         ),
       ],
-    );
-  }
-
-  /// Build profile header with avatar and basic info
-  Widget _buildProfileHeader(ProfileProvider provider) {
-    final profile = provider.userProfile;
-    if (profile == null) return const SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Profile Picture with upload option
-          Stack(
-            alignment: Alignment.bottomRight,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          color: Colors.white,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              const SizedBox(height: 40),
+
               // Profile image
               GestureDetector(
                 onTap: () => _showProfileImageOptions(provider),
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppTheme.emeraldGreen, width: 3),
-                  ),
-                  child: ClipOval(
-                    child: provider.selectedProfileImage != null
-                        ? Image.file(
-                            provider.selectedProfileImage!,
-                            fit: BoxFit.cover,
-                          )
-                        : profile.profilePicture != null
-                            ? CachedNetworkImage(
-                                imageUrl: profile.profilePicture!,
-                                fit: BoxFit.cover,
-                                placeholder: (context, url) => Container(
-                                  color: AppTheme.gray200,
-                                  child: const Icon(
-                                    Icons.person,
-                                    color: AppTheme.gray400,
-                                    size: 40,
-                                  ),
-                                ),
-                                errorWidget: (context, url, error) =>
-                                    _buildAvatarPlaceholder(profile.name),
-                              )
-                            : _buildAvatarPlaceholder(profile.name),
-                  ),
-                ),
-              ),
-
-              // Edit button
-              if (!provider.isUploadingImage)
-                GestureDetector(
-                  onTap: () => _showProfileImageOptions(provider),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.emeraldGreen,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppTheme.emeraldGreen,
+                          width: 3,
                         ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                ),
-
-              // Loading indicator
-              if (provider.isUploadingImage)
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
                       ),
-                    ],
-                  ),
-                  child: const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppTheme.emeraldGreen,
+                      child: ClipOval(
+                        child: provider.selectedProfileImage != null
+                            ? Image.file(
+                                provider.selectedProfileImage!,
+                                fit: BoxFit.cover,
+                              )
+                            : profile.profilePicture != null
+                                ? CachedNetworkImage(
+                                    imageUrl: profile.profilePicture!,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => Container(
+                                      color: AppTheme.gray200,
+                                      child: const Icon(
+                                        Icons.person,
+                                        color: AppTheme.gray400,
+                                        size: 40,
+                                      ),
+                                    ),
+                                    errorWidget: (context, url, error) =>
+                                        _buildAvatarPlaceholder(profile.name),
+                                  )
+                                : _buildAvatarPlaceholder(profile.name),
                       ),
                     ),
-                  ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.emeraldGreen,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Name
-          Text(
-            profile.name,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.deepCharcoal,
-                ),
-          ),
-
-          const SizedBox(height: 4),
-
-          // Phone number
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.phone,
-                size: 16,
-                color: AppTheme.gray600,
               ),
-              const SizedBox(width: 4),
+
+              const SizedBox(height: 16),
+
+              // User name
               Text(
-                '+91 ${profile.phone}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.gray600,
+                profile.name,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.deepCharcoal,
                     ),
               ),
-            ],
-          ),
 
-          // Email if available
-          if (profile.email.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.email,
-                  size: 16,
-                  color: AppTheme.gray600,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  profile.email,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.gray600,
-                      ),
-                ),
-              ],
-            ),
-          ],
+              const SizedBox(height: 4),
 
-          const SizedBox(height: 16),
-
-          // Verified badge if applicable
-          if (profile.isVerified)
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 6,
-              ),
-              decoration: BoxDecoration(
-                color: AppTheme.success.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppTheme.success.withOpacity(0.3),
-                ),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
+              // Phone number
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.verified_user,
-                    color: AppTheme.success,
+                  const Icon(
+                    Icons.phone,
                     size: 14,
+                    color: AppTheme.gray600,
                   ),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
-                    'Verified User',
-                    style: TextStyle(
-                      color: AppTheme.success,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
+                    '+91 ${profile.phone}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.gray600,
+                        ),
                   ),
                 ],
               ),
-            ),
-        ],
-      ),
-    );
-  }
 
-  /// Build stats cards section
-  Widget _buildStatsCards(ProfileProvider provider) {
-    final stats = provider.profileStats;
+              if (profile.email.isNotEmpty) ...[
+                const SizedBox(height: 4),
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          _buildStatCard(
-            icon: Icons.bookmark,
-            title: 'Bookings',
-            value: stats.totalBookings.toString(),
-            color: Colors.orange,
-            onTap: () {
-              _tabController.animateTo(0);
-            },
-          ),
-          _buildStatCard(
-            icon: Icons.favorite,
-            title: 'Wishlist',
-            value: stats.wishlistCount.toString(),
-            color: Colors.red,
-            onTap: () {
-              _tabController.animateTo(1);
-            },
-          ),
-          _buildStatCard(
-            icon: Icons.star,
-            title: 'Reviews',
-            value: '0',
-            color: Colors.amber,
-            onTap: () {
-              _tabController.animateTo(2);
-            },
-          ),
-        ],
-      ),
-    );
-  }
+                // Email
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.email,
+                      size: 14,
+                      color: AppTheme.gray600,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      profile.email,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.gray600,
+                          ),
+                    ),
+                  ],
+                ),
+              ],
 
-  /// Build individual stat card
-  Widget _buildStatCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  shape: BoxShape.circle,
+              const SizedBox(height: 12),
+
+              // Verified badge
+              if (profile.isVerified)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppTheme.success.withOpacity(0.3),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.verified_user,
+                        color: AppTheme.success,
+                        size: 14,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        'Verified User',
+                        style: TextStyle(
+                          color: AppTheme.success,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.gray600,
-                ),
-              ),
             ],
           ),
         ),
@@ -471,68 +268,33 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Build tab section with bookings, wishlist, and reviews
-  Widget _buildTabSection(ProfileProvider provider) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      height: 500, // Fixed height for demonstration, adjust as needed
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+  Widget _buildTabBar() {
+    return SliverPersistentHeader(
+      delegate: _SliverAppBarDelegate(
+        TabBar(
+          controller: _tabController,
+          labelColor: AppTheme.emeraldGreen,
+          unselectedLabelColor: AppTheme.gray600,
+          indicatorColor: AppTheme.emeraldGreen,
+          indicatorWeight: 3,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+          tabs: const [
+            Tab(text: 'BOOKINGS'),
+            Tab(text: 'WISHLIST'),
+            Tab(text: 'REVIEWS'),
+          ],
+        ),
       ),
-      child: Column(
-        children: [
-          // Tab Bar
-          Container(
-            decoration: const BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: AppTheme.gray200),
-              ),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              labelColor: AppTheme.emeraldGreen,
-              unselectedLabelColor: AppTheme.gray600,
-              indicatorColor: AppTheme.emeraldGreen,
-              indicatorWeight: 3,
-              tabs: const [
-                Tab(text: 'BOOKINGS'),
-                Tab(text: 'WISHLIST'),
-                Tab(text: 'REVIEWS'),
-              ],
-            ),
-          ),
-
-          // Tab Content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildBookingsTab(provider),
-                _buildWishlistTab(provider),
-                _buildReviewsTab(provider),
-              ],
-            ),
-          ),
-        ],
-      ),
+      pinned: true,
     );
   }
 
-  /// Build bookings tab content
   Widget _buildBookingsTab(ProfileProvider provider) {
-    final bookings = provider.userBookings;
-
     if (provider.isLoading) {
-      return _buildLoadingList();
+      return _buildTabLoadingState();
     }
+
+    final bookings = provider.userBookings;
 
     if (bookings.isEmpty) {
       return _buildEmptyState(
@@ -546,23 +308,26 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: bookings.length,
-      itemBuilder: (context, index) {
-        final booking = bookings[index];
-        return _buildBookingCard(booking);
-      },
+    return RefreshIndicator(
+      onRefresh: provider.refresh,
+      color: AppTheme.emeraldGreen,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: bookings.length,
+        itemBuilder: (context, index) {
+          final booking = bookings[index];
+          return _buildBookingCard(booking);
+        },
+      ),
     );
   }
 
-  /// Build wishlist tab content
   Widget _buildWishlistTab(ProfileProvider provider) {
-    final wishlistPGs = provider.wishlistPGs;
-
     if (provider.isLoading) {
-      return _buildLoadingList();
+      return _buildTabLoadingState();
     }
+
+    final wishlistPGs = provider.wishlistPGs;
 
     if (wishlistPGs.isEmpty) {
       return _buildEmptyState(
@@ -576,45 +341,45 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: wishlistPGs.length,
-      itemBuilder: (context, index) {
-        final pg = wishlistPGs[index];
-        return _buildWishlistCard(pg, provider);
-      },
+    return RefreshIndicator(
+      onRefresh: provider.refresh,
+      color: AppTheme.emeraldGreen,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: wishlistPGs.length,
+        itemBuilder: (context, index) {
+          final pg = wishlistPGs[index];
+          return _buildWishlistCard(pg, provider);
+        },
+      ),
     );
   }
 
-  /// Build reviews tab content
   Widget _buildReviewsTab(ProfileProvider provider) {
-    // Placeholder for reviews tab
-    if (provider.isLoading) {
-      return _buildLoadingList();
-    }
-
-    // Assume no reviews for demo
     return _buildEmptyState(
       icon: Icons.rate_review_outlined,
       title: 'No Reviews Yet',
       message: 'Your reviews will appear here',
       buttonText: 'Write a Review',
       onButtonPressed: () {
-        // Navigate to review screen or show message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Review feature coming soon!'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       },
     );
   }
 
-  /// Build booking card
   Widget _buildBookingCard(Booking booking) {
     final statusColor = _getStatusColor(booking.status);
 
-    return Container(
+    return Card(
+      elevation: 2,
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.gray200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -761,10 +526,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                 TextButton(
                   onPressed: () {
                     // Navigate to booking details
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Booking details coming soon!'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
                   },
                   style: TextButton.styleFrom(
                     foregroundColor: AppTheme.emeraldGreen,
-                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                   ),
                   child: const Text('View Details'),
                 ),
@@ -776,14 +550,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Build wishlist card
   Widget _buildWishlistCard(PGProperty pg, ProfileProvider provider) {
-    return Container(
+    return Card(
+      elevation: 2,
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.gray200),
       ),
       child: Column(
         children: [
@@ -1040,7 +812,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Build amenity icon
   Widget _buildAmenityIcon(IconData icon, String tooltip) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
@@ -1062,7 +833,113 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Build empty state
+  Widget _buildLoginPrompt(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.account_circle,
+            size: 80,
+            color: AppTheme.gray400,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Login Required',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.deepCharcoal,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              'Please login to view your profile and access personalized features',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppTheme.gray600,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pushNamed(context, AppConstants.loginRoute);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.emeraldGreen,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 32,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Login',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: () {
+              Navigator.pushNamed(context, AppConstants.signupRoute);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.emeraldGreen,
+            ),
+            child: const Text('Create an Account'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.emeraldGreen),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Loading profile...',
+            style: TextStyle(color: AppTheme.gray600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabLoadingState() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 3,
+        itemBuilder: (context, index) {
+          return Container(
+            height: 180,
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildEmptyState({
     required IconData icon,
     required String title,
@@ -1072,7 +949,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -1120,155 +997,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Build loading list
-  Widget _buildLoadingList() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 3,
-      itemBuilder: (context, index) {
-        return Container(
-          height: 120,
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 100,
-                decoration: const BoxDecoration(
-                  color: AppTheme.gray200,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    bottomLeft: Radius.circular(12),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Container(
-                        height: 16,
-                        width: 150,
-                        decoration: BoxDecoration(
-                          color: AppTheme.gray200,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      Container(
-                        height: 12,
-                        width: 200,
-                        decoration: BoxDecoration(
-                          color: AppTheme.gray200,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Container(
-                            height: 12,
-                            width: 60,
-                            decoration: BoxDecoration(
-                              color: AppTheme.gray200,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          const Spacer(),
-                          Container(
-                            height: 12,
-                            width: 60,
-                            decoration: BoxDecoration(
-                              color: AppTheme.gray200,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// Build login prompt
-  Widget _buildLoginPrompt() {
-    return Center(
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SlideTransition(
-          position: _slideAnimation,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.account_circle,
-                  size: 80, color: AppTheme.gray400),
-              const SizedBox(height: 20),
-              Text(
-                'Login Required',
-                style: Theme.of(
-                  context,
-                )
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Please login to view your profile',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(color: AppTheme.gray600),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => NavigationService.navigateToLogin(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.emeraldGreen,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text('Login'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Build loading state
-  Widget _buildLoadingState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.emeraldGreen),
-          ),
-          SizedBox(height: 16),
-          Text('Loading profile...'),
-        ],
-      ),
-    );
-  }
-
-  /// Build avatar placeholder
   Widget _buildAvatarPlaceholder(String name) {
     final initials = name.isNotEmpty
         ? name
@@ -1282,7 +1010,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       color: AppTheme.emeraldGreen,
       child: Center(
         child: Text(
-          initials.substring(0, initials.length > 2 ? 2 : initials.length),
+          initials.length > 2 ? initials.substring(0, 2) : initials,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -1293,7 +1021,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Show profile image options
   void _showProfileImageOptions(ProfileProvider provider) {
     showModalBottomSheet(
       context: context,
@@ -1301,19 +1028,21 @@ class _ProfileScreenState extends State<ProfileScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             Text(
@@ -1324,99 +1053,79 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
             ),
             const SizedBox(height: 24),
-            _buildImageOptionButton(
-              icon: Icons.photo_camera,
-              title: 'Take a Photo',
-              onTap: () async {
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.emeraldGreen.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.photo_camera,
+                  color: AppTheme.emeraldGreen,
+                ),
+              ),
+              title: const Text('Take a Photo'),
+              onTap: () {
                 Navigator.pop(context);
-                final XFile? photo = await _imagePicker.pickImage(
-                  source: ImageSource.camera,
-                  maxWidth: 800,
-                  maxHeight: 800,
-                  imageQuality: 85,
+                // In a real app, would use image_picker
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Camera functionality coming soon!'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
                 );
-                if (photo != null) {
-                  provider.uploadProfileImage(File(photo.path));
-                }
               },
             ),
-            const SizedBox(height: 16),
-            _buildImageOptionButton(
-              icon: Icons.photo_library,
-              title: 'Choose from Gallery',
-              onTap: () async {
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.emeraldGreen.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.photo_library,
+                  color: AppTheme.emeraldGreen,
+                ),
+              ),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
                 Navigator.pop(context);
-                final XFile? image = await _imagePicker.pickImage(
-                  source: ImageSource.gallery,
-                  maxWidth: 800,
-                  maxHeight: 800,
-                  imageQuality: 85,
+                // In a real app, would use image_picker
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Gallery functionality coming soon!'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
                 );
-                if (image != null) {
-                  provider.uploadProfileImage(File(image.path));
-                }
               },
             ),
-            if (provider.userProfile?.profilePicture != null) ...[
-              const SizedBox(height: 16),
-              _buildImageOptionButton(
-                icon: Icons.delete,
-                title: 'Remove Photo',
+            if (provider.userProfile?.profilePicture != null)
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.red,
+                  ),
+                ),
+                title: const Text('Remove Photo'),
                 onTap: () {
                   Navigator.pop(context);
                   provider.removeProfileImage();
                 },
-                color: Colors.red,
               ),
-            ],
           ],
         ),
       ),
     );
   }
 
-  /// Build image option button
-  Widget _buildImageOptionButton({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    Color? color,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppTheme.gray300),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: (color ?? AppTheme.emeraldGreen).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: color ?? AppTheme.emeraldGreen),
-            ),
-            const SizedBox(width: 16),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: color ?? AppTheme.deepCharcoal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Show settings sheet
   void _showSettingsSheet(ProfileProvider provider) {
     showModalBottomSheet(
       context: context,
@@ -1426,18 +1135,20 @@ class _ProfileScreenState extends State<ProfileScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         height: MediaQuery.of(context).size.height * 0.7,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20, left: 160),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             Text(
@@ -1450,48 +1161,73 @@ class _ProfileScreenState extends State<ProfileScreen>
             const SizedBox(height: 24),
 
             // Settings options
-            _buildSettingsItem(
+            _buildSettingsTile(
               icon: Icons.person,
               title: 'Account Settings',
               onTap: () {
                 // Navigate to account settings
                 Navigator.pop(context);
+                _showEditProfileSheet(provider);
               },
             ),
             const Divider(),
-            _buildSettingsItem(
+            _buildSettingsTile(
               icon: Icons.notifications,
               title: 'Notifications',
               onTap: () {
                 // Navigate to notifications settings
                 Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Notification settings coming soon!'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
               },
             ),
             const Divider(),
-            _buildSettingsItem(
+            _buildSettingsTile(
               icon: Icons.security,
               title: 'Privacy & Security',
               onTap: () {
                 // Navigate to privacy settings
                 Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Privacy settings coming soon!'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
               },
             ),
             const Divider(),
-            _buildSettingsItem(
+            _buildSettingsTile(
               icon: Icons.help_outline,
               title: 'Help & Support',
               onTap: () {
                 // Navigate to help
                 Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Help & support coming soon!'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
               },
             ),
             const Divider(),
-            _buildSettingsItem(
+            _buildSettingsTile(
               icon: Icons.info_outline,
               title: 'About',
               onTap: () {
                 // Navigate to about
                 Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('About page coming soon!'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
               },
             ),
             const Divider(),
@@ -1505,11 +1241,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                 onPressed: () {
                   // Handle logout
                   Navigator.pop(context);
-                  provider.logout();
-                  NavigationService.navigateToLogin();
+                  _showLogoutConfirmation(provider);
                 },
                 icon: const Icon(Icons.logout),
-                label: const Text('Logout'),
+                label: const Text(
+                  'Logout',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   foregroundColor: Colors.white,
@@ -1526,49 +1266,347 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Build settings item
-  Widget _buildSettingsItem({
+  Widget _buildSettingsTile({
     required IconData icon,
     required String title,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    return ListTile(
+      leading: Icon(icon, color: AppTheme.emeraldGreen),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      contentPadding: EdgeInsets.zero,
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
+    );
+  }
+
+  void _showEditProfileSheet(ProfileProvider provider) {
+    final profile = provider.userProfile;
+    if (profile == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        height: MediaQuery.of(context).size.height * 0.8,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: AppTheme.emeraldGreen),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            const Icon(Icons.arrow_forward_ios,
-                size: 16, color: AppTheme.gray400),
+            Text(
+              'Edit Profile',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.deepCharcoal,
+                  ),
+            ),
+            const SizedBox(height: 24),
+
+            Expanded(
+              child: ListView(
+                children: [
+                  // Profile Image
+                  Center(
+                    child: GestureDetector(
+                      onTap: () => _showProfileImageOptions(provider),
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppTheme.emeraldGreen,
+                                width: 3,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: provider.selectedProfileImage != null
+                                  ? Image.file(
+                                      provider.selectedProfileImage!,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : profile.profilePicture != null
+                                      ? CachedNetworkImage(
+                                          imageUrl: profile.profilePicture!,
+                                          fit: BoxFit.cover,
+                                          placeholder: (context, url) =>
+                                              Container(
+                                            color: AppTheme.gray200,
+                                            child: const Icon(
+                                              Icons.person,
+                                              color: AppTheme.gray400,
+                                              size: 40,
+                                            ),
+                                          ),
+                                          errorWidget: (context, url, error) =>
+                                              _buildAvatarPlaceholder(
+                                                  profile.name),
+                                        )
+                                      : _buildAvatarPlaceholder(profile.name),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppTheme.emeraldGreen,
+                                shape: BoxShape.circle,
+                                border:
+                                    Border.all(color: Colors.white, width: 2),
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Name
+                  const Text(
+                    'Full Name',
+                    style: TextStyle(
+                      color: AppTheme.gray600,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    initialValue: profile.name,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter your full name',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    readOnly: true, // For demo purposes
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Email
+                  const Text(
+                    'Email Address',
+                    style: TextStyle(
+                      color: AppTheme.gray600,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    initialValue: profile.email,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter your email address',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    readOnly: true, // For demo purposes
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Phone
+                  const Text(
+                    'Phone Number',
+                    style: TextStyle(
+                      color: AppTheme.gray600,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    initialValue: profile.phone,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter your phone number',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      prefixText: '+91 ',
+                    ),
+                    keyboardType: TextInputType.phone,
+                    readOnly: true, // For demo purposes
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Gender
+                  const Text(
+                    'Gender',
+                    style: TextStyle(
+                      color: AppTheme.gray600,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppTheme.gray300),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          profile.gender ?? 'Not specified',
+                          style: TextStyle(
+                            color: profile.gender != null
+                                ? AppTheme.deepCharcoal
+                                : AppTheme.gray600,
+                          ),
+                        ),
+                        const Spacer(),
+                        const Icon(
+                          Icons.arrow_drop_down,
+                          color: AppTheme.gray600,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Location
+                  const Text(
+                    'Current Location',
+                    style: TextStyle(
+                      color: AppTheme.gray600,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    initialValue: profile.currentLocation,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter your current location',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    readOnly: true, // For demo purposes
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Save button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  // Save profile changes
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Profile editing coming soon!'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.emeraldGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Save Changes',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  /// Navigate to edit profile
-  void _navigateToEditProfile(ProfileProvider provider) {
-    // Navigate to edit profile screen
-    Navigator.pushNamed(context, AppConstants.editProfileRoute);
+  void _showLogoutConfirmation(ProfileProvider provider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              provider.logout();
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppConstants.loginRoute,
+                (route) => false,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
   }
 
-  /// Format date
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  /// Get status text
   String _getStatusText(String status) {
     switch (status) {
       case 'PENDING':
@@ -1588,7 +1626,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Get status color
   Color _getStatusColor(String status) {
     switch (status) {
       case 'PENDING':
@@ -1608,7 +1645,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Get gender text
   String _getGenderText(String gender) {
     switch (gender) {
       case 'MALE':
@@ -1622,7 +1658,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Get gender color
   Color _getGenderColor(String gender) {
     switch (gender) {
       case 'MALE':
@@ -1634,11 +1669,36 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Get rating color
   Color _getRatingColor(double rating) {
     if (rating >= 4.5) return Colors.green;
     if (rating >= 3.5) return Colors.amber;
     if (rating >= 2.5) return Colors.orange;
     return Colors.red;
+  }
+}
+
+class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar tabBar;
+
+  _SliverAppBarDelegate(this.tabBar);
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Colors.white,
+      child: tabBar,
+    );
+  }
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  bool shouldRebuild(covariant _SliverAppBarDelegate oldDelegate) {
+    return tabBar != oldDelegate.tabBar;
   }
 }

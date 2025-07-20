@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../provider/search_provider.dart';
@@ -21,6 +23,7 @@ class _SearchScreenState extends State<SearchScreen> {
   final ScrollController _scrollController = ScrollController();
   Timer? _searchDebouncer;
   bool _showSuggestions = false;
+  bool _isGridView = false;
 
   @override
   void initState() {
@@ -87,14 +90,125 @@ class _SearchScreenState extends State<SearchScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder:
-          (context) => FilterBottomSheet(
-            initialFilters: searchProvider.activeFilters,
-            onFiltersApplied: (filters) {
-              searchProvider.applyFilters(filters);
-            },
-          ),
+      builder: (context) => FilterBottomSheet(
+        initialFilters: searchProvider.activeFilters,
+        onFiltersApplied: (filters) {
+          searchProvider.applyFilters(filters);
+        },
+      ),
     );
+  }
+
+  void _showSortOptions() {
+    final searchProvider = context.read<SearchProvider>();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20, left: 160),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              'Sort By',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.deepCharcoal,
+                  ),
+            ),
+            const SizedBox(height: 24),
+            _buildSortOption(
+              title: 'Distance (Nearest First)',
+              isSelected: searchProvider.sortBy == 'distance' &&
+                  searchProvider.sortOrder == 'asc',
+              onTap: () {
+                searchProvider.updateSort('distance', 'asc');
+                Navigator.pop(context);
+              },
+            ),
+            _buildSortOption(
+              title: 'Price (Low to High)',
+              isSelected: searchProvider.sortBy == 'price' &&
+                  searchProvider.sortOrder == 'asc',
+              onTap: () {
+                searchProvider.updateSort('price', 'asc');
+                Navigator.pop(context);
+              },
+            ),
+            _buildSortOption(
+              title: 'Price (High to Low)',
+              isSelected: searchProvider.sortBy == 'price' &&
+                  searchProvider.sortOrder == 'desc',
+              onTap: () {
+                searchProvider.updateSort('price', 'desc');
+                Navigator.pop(context);
+              },
+            ),
+            _buildSortOption(
+              title: 'Rating (Highest First)',
+              isSelected: searchProvider.sortBy == 'rating' &&
+                  searchProvider.sortOrder == 'desc',
+              onTap: () {
+                searchProvider.updateSort('rating', 'desc');
+                Navigator.pop(context);
+              },
+            ),
+            _buildSortOption(
+              title: 'Newest First',
+              isSelected: searchProvider.sortBy == 'newest' &&
+                  searchProvider.sortOrder == 'desc',
+              onTap: () {
+                searchProvider.updateSort('newest', 'desc');
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortOption({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isSelected ? AppTheme.emeraldGreen : AppTheme.deepCharcoal,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+      trailing: isSelected
+          ? const Icon(
+              Icons.check_circle,
+              color: AppTheme.emeraldGreen,
+            )
+          : null,
+      onTap: onTap,
+    );
+  }
+
+  void _toggleViewMode() {
+    setState(() {
+      _isGridView = !_isGridView;
+    });
   }
 
   @override
@@ -105,9 +219,9 @@ class _SearchScreenState extends State<SearchScreen> {
         title: Text(
           'Find Your PG',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            color: AppTheme.deepCharcoal,
-            fontWeight: FontWeight.w700,
-          ),
+                color: AppTheme.deepCharcoal,
+                fontWeight: FontWeight.w700,
+              ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -185,23 +299,22 @@ class _SearchScreenState extends State<SearchScreen> {
                 size: 16,
               ),
             ),
-            suffixIcon:
-                _searchController.text.isNotEmpty
-                    ? IconButton(
-                      icon: Icon(
-                        Icons.clear_rounded,
-                        color: AppTheme.gray500,
-                        size: 16,
-                      ),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() {
-                          _showSuggestions = false;
-                        });
-                        context.read<SearchProvider>().clearSearch();
-                      },
-                    )
-                    : null,
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: Icon(
+                      Icons.clear_rounded,
+                      color: AppTheme.gray500,
+                      size: 16,
+                    ),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {
+                        _showSuggestions = false;
+                      });
+                      context.read<SearchProvider>().clearSearch();
+                    },
+                  )
+                : null,
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -268,44 +381,43 @@ class _SearchScreenState extends State<SearchScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children:
-                    provider.recentSearches.take(5).map((search) {
-                      return GestureDetector(
-                        onTap: () => _selectSuggestion(search),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                children: provider.recentSearches.take(5).map((search) {
+                  return GestureDetector(
+                    onTap: () => _selectSuggestion(search),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.emeraldGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppTheme.emeraldGreen.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.history,
+                            color: AppTheme.emeraldGreen,
+                            size: 14,
                           ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.emeraldGreen.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: AppTheme.emeraldGreen.withOpacity(0.2),
+                          const SizedBox(width: 4),
+                          Text(
+                            search,
+                            style: TextStyle(
+                              color: AppTheme.emeraldGreen,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 12,
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.history,
-                                color: AppTheme.emeraldGreen,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                search,
-                                style: TextStyle(
-                                  color: AppTheme.emeraldGreen,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
             ],
           ),
@@ -326,28 +438,95 @@ class _SearchScreenState extends State<SearchScreen> {
           color: Colors.white,
           child: Row(
             children: [
+              // Search count
               Expanded(
-                child: Text(
-                  provider.hasFiltersApplied
-                      ? provider.getFilterSummary()
-                      : 'No filters applied',
-                  style: TextStyle(color: AppTheme.gray700, fontSize: 13),
+                child: RichText(
+                  text: TextSpan(
+                    style: TextStyle(color: AppTheme.gray700, fontSize: 13),
+                    children: [
+                      TextSpan(
+                        text: '${provider.searchResults.length} ',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.deepCharcoal),
+                      ),
+                      const TextSpan(text: 'results found'),
+                      if (provider.hasFiltersApplied)
+                        TextSpan(
+                          text: ' • ${provider.getFilterSummary()}',
+                          style: const TextStyle(
+                            color: AppTheme.emeraldGreen,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                    ],
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+
+              // View toggle
+              IconButton(
+                icon: Icon(
+                  _isGridView ? Icons.view_list : Icons.grid_view,
+                  color: AppTheme.gray700,
+                  size: 20,
+                ),
+                onPressed: _toggleViewMode,
+                tooltip: _isGridView ? 'List View' : 'Grid View',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+
+              const SizedBox(width: 16),
+
+              // Sort button
+              InkWell(
+                onTap: _showSortOptions,
+                borderRadius: BorderRadius.circular(20),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.sort,
+                        size: 16,
+                        color: AppTheme.gray700,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Sort',
+                        style: TextStyle(
+                          color: AppTheme.gray700,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              // Filter button
               InkWell(
                 onTap: _showFilterSheet,
+                borderRadius: BorderRadius.circular(20),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        provider.hasFiltersApplied
-                            ? AppTheme.emeraldGreen
-                            : AppTheme.gray100,
+                    color: provider.hasFiltersApplied
+                        ? AppTheme.emeraldGreen
+                        : AppTheme.gray100,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -356,10 +535,9 @@ class _SearchScreenState extends State<SearchScreen> {
                       Icon(
                         Icons.filter_list,
                         size: 16,
-                        color:
-                            provider.hasFiltersApplied
-                                ? Colors.white
-                                : AppTheme.gray700,
+                        color: provider.hasFiltersApplied
+                            ? Colors.white
+                            : AppTheme.gray700,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -367,10 +545,9 @@ class _SearchScreenState extends State<SearchScreen> {
                             ? '${provider.activeFilterCount} Filters'
                             : 'Filter',
                         style: TextStyle(
-                          color:
-                              provider.hasFiltersApplied
-                                  ? Colors.white
-                                  : AppTheme.gray700,
+                          color: provider.hasFiltersApplied
+                              ? Colors.white
+                              : AppTheme.gray700,
                           fontWeight: FontWeight.w500,
                           fontSize: 12,
                         ),
@@ -394,7 +571,7 @@ class _SearchScreenState extends State<SearchScreen> {
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: suggestions.length,
-        separatorBuilder: (context, index) => const Divider(),
+        separatorBuilder: (context, index) => const Divider(height: 1),
         itemBuilder: (context, index) {
           final suggestion = suggestions[index];
           return ListTile(
@@ -431,9 +608,9 @@ class _SearchScreenState extends State<SearchScreen> {
             Text(
               'Find Your Perfect PG',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppTheme.deepCharcoal,
-              ),
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.deepCharcoal,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
@@ -468,41 +645,40 @@ class _SearchScreenState extends State<SearchScreen> {
         Text(
           'Popular Searches',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: AppTheme.deepCharcoal,
-          ),
+                fontWeight: FontWeight.w600,
+                color: AppTheme.deepCharcoal,
+              ),
         ),
         const SizedBox(height: 16),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           alignment: WrapAlignment.center,
-          children:
-              suggestions.map((suggestion) {
-                return GestureDetector(
-                  onTap: () => _selectSuggestion(suggestion),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AppTheme.emeraldGreen.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Text(
-                      suggestion,
-                      style: TextStyle(
-                        color: AppTheme.emeraldGreen,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+          children: suggestions.map((suggestion) {
+            return GestureDetector(
+              onTap: () => _selectSuggestion(suggestion),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppTheme.emeraldGreen.withOpacity(0.3),
                   ),
-                );
-              }).toList(),
+                ),
+                child: Text(
+                  suggestion,
+                  style: TextStyle(
+                    color: AppTheme.emeraldGreen,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -520,9 +696,9 @@ class _SearchScreenState extends State<SearchScreen> {
             Text(
               'Something went wrong',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppTheme.deepCharcoal,
-              ),
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.deepCharcoal,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -566,9 +742,9 @@ class _SearchScreenState extends State<SearchScreen> {
             Text(
               'No Results Found',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppTheme.deepCharcoal,
-              ),
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.deepCharcoal,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -580,21 +756,27 @@ class _SearchScreenState extends State<SearchScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            if (context.read<SearchProvider>().hasFiltersApplied)
-              ElevatedButton(
-                onPressed: () {
-                  context.read<SearchProvider>().clearFilters();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.emeraldGreen,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
-                child: const Text('Clear Filters'),
-              ),
+            Consumer<SearchProvider>(
+              builder: (context, provider, child) {
+                if (provider.hasFiltersApplied) {
+                  return ElevatedButton(
+                    onPressed: () {
+                      provider.clearFilters();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.emeraldGreen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                    child: const Text('Clear Filters'),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
           ],
         ),
       ),
@@ -604,54 +786,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildSearchResults(SearchProvider provider) {
     return Stack(
       children: [
-        ListView.builder(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(16),
-          itemCount:
-              provider.searchResults.length + 1, // +1 for loading indicator
-          itemBuilder: (context, index) {
-            if (index == provider.searchResults.length) {
-              // Show loading indicator at the end if more data is loading
-              if (provider.isLoadingMore) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              } else {
-                return const SizedBox.shrink();
-              }
-            }
-
-            // Show PG card
-            final pg = provider.searchResults[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: PGCard(
-                pgProperty: pg,
-                variant: PGCardVariant.detailed,
-                onTap: () => _navigateToPGDetail(pg.id),
-                onWishlistTap: () {
-                  // Wishlist functionality would be implemented here
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Wishlist feature coming soon!'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-                onContactTap: () {
-                  // Contact functionality would be implemented here
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Contact feature coming soon!'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-        ),
+        _isGridView ? _buildGridResults(provider) : _buildListResults(provider),
 
         // Show loading indicator overlay when first loading
         if (provider.isLoading && !provider.isLoadingMore)
@@ -660,6 +795,98 @@ class _SearchScreenState extends State<SearchScreen> {
             child: const Center(child: CircularProgressIndicator()),
           ),
       ],
+    );
+  }
+
+  Widget _buildListResults(SearchProvider provider) {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount: provider.searchResults.length + 1, // +1 for loading indicator
+      itemBuilder: (context, index) {
+        if (index == provider.searchResults.length) {
+          // Show loading indicator at the end if more data is loading
+          if (provider.isLoadingMore) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          } else {
+            return const SizedBox.shrink();
+          }
+        }
+
+        // Show PG card
+        final pg = provider.searchResults[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: PGCard(
+            pgProperty: pg,
+            variant: PGCardVariant.detailed,
+            onTap: () => _navigateToPGDetail(pg.id),
+            onWishlistTap: () {
+              // Wishlist functionality would be implemented here
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Wishlist feature coming soon!'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            onContactTap: () {
+              // Contact functionality would be implemented here
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Contact feature coming soon!'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGridResults(SearchProvider provider) {
+    return GridView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.75,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: provider.searchResults.length + 1, // +1 for loading indicator
+      itemBuilder: (context, index) {
+        if (index == provider.searchResults.length) {
+          // Show loading indicator at the end if more data is loading
+          if (provider.isLoadingMore) {
+            return const Center(child: CircularProgressIndicator());
+          } else {
+            return const SizedBox.shrink();
+          }
+        }
+
+        // Show compact PG card
+        final pg = provider.searchResults[index];
+        return PGCard(
+          pgProperty: pg,
+          variant: PGCardVariant.compact,
+          onTap: () => _navigateToPGDetail(pg.id),
+          isWishlisted: false,
+          onWishlistTap: () {
+            // Wishlist functionality would be implemented here
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Wishlist feature coming soon!'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

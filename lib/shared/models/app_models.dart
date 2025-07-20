@@ -23,9 +23,6 @@ class PGProperty {
   /// Security deposit
   final double securityDeposit;
 
-  /// Distance from city center (in km)
-  final double distanceFromCenter;
-
   /// Rating (0-5)
   final double rating;
 
@@ -41,12 +38,6 @@ class PGProperty {
   /// Gender preference (MALE, FEMALE, ANY)
   final String genderPreference;
 
-  /// Whether meals are included
-  final bool mealsIncluded;
-
-  /// Monthly meal price (if meals included)
-  final double? mealPrice;
-
   /// Available room types
   final List<String> roomTypes;
 
@@ -61,12 +52,6 @@ class PGProperty {
 
   /// Contact email
   final String? contactEmail;
-
-  /// Check-in time
-  final String checkInTime;
-
-  /// Check-out time
-  final String checkOutTime;
 
   /// Full description
   final String description;
@@ -112,21 +97,16 @@ class PGProperty {
     required this.longitude,
     required this.price,
     required this.securityDeposit,
-    required this.distanceFromCenter,
     required this.rating,
     required this.reviewCount,
     required this.amenities,
     required this.images,
     required this.genderPreference,
-    required this.mealsIncluded,
-    this.mealPrice,
     required this.roomTypes,
     required this.occupationType,
     required this.ownerName,
     required this.contactPhone,
     this.contactEmail,
-    required this.checkInTime,
-    required this.checkOutTime,
     required this.description,
     required this.houseRules,
     required this.nearbyLandmarks,
@@ -135,8 +115,8 @@ class PGProperty {
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
-    this.availableRooms = 0,
-    this.totalRooms = 0,
+    required this.totalRooms,
+    required this.availableRooms,
     this.availableFrom,
   });
 
@@ -150,8 +130,6 @@ class PGProperty {
       longitude: (json['longitude'] as num).toDouble(),
       price: (json['price'] as num).toDouble(),
       securityDeposit: (json['securityDeposit'] as num?)?.toDouble() ?? 0.0,
-      distanceFromCenter:
-          (json['distanceFromCenter'] as num?)?.toDouble() ?? 0.0,
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       reviewCount: (json['reviewCount'] as num?)?.toInt() ?? 0,
       amenities: (json['amenities'] as List<dynamic>?)
@@ -163,8 +141,6 @@ class PGProperty {
               .toList() ??
           [],
       genderPreference: json['genderPreference'] as String? ?? 'ANY',
-      mealsIncluded: json['mealsIncluded'] as bool? ?? false,
-      mealPrice: (json['mealPrice'] as num?)?.toDouble(),
       roomTypes: (json['roomTypes'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -173,8 +149,6 @@ class PGProperty {
       ownerName: json['ownerName'] as String? ?? 'Property Owner',
       contactPhone: json['contactPhone'] as String? ?? '',
       contactEmail: json['contactEmail'] as String?,
-      checkInTime: json['checkInTime'] as String? ?? '12:00 PM',
-      checkOutTime: json['checkOutTime'] as String? ?? '11:00 AM',
       description: json['description'] as String? ?? '',
       houseRules: (json['houseRules'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -196,6 +170,8 @@ class PGProperty {
       availableFrom: json['availableFrom'] != null
           ? DateTime.parse(json['availableFrom'] as String)
           : null,
+      totalRooms: json['totalRooms'] as int? ?? 0,
+      availableRooms: json['availableRooms'] as int? ?? 0,
     );
   }
 
@@ -209,26 +185,23 @@ class PGProperty {
       'longitude': longitude,
       'price': price,
       'securityDeposit': securityDeposit,
-      'distanceFromCenter': distanceFromCenter,
       'rating': rating,
       'reviewCount': reviewCount,
       'amenities': amenities,
       'images': images,
       'genderPreference': genderPreference,
-      'mealsIncluded': mealsIncluded,
-      'mealPrice': mealPrice,
       'roomTypes': roomTypes,
       'occupationType': occupationType,
       'ownerName': ownerName,
       'contactPhone': contactPhone,
       'contactEmail': contactEmail,
-      'checkInTime': checkInTime,
-      'checkOutTime': checkOutTime,
       'description': description,
       'houseRules': houseRules,
       'nearbyLandmarks': nearbyLandmarks,
       'isVerified': isVerified,
       'isFeatured': isFeatured,
+      'totalRooms': totalRooms,
+      'availableRooms': availableRooms,
       'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -245,31 +218,26 @@ class PGProperty {
     double? longitude,
     double? price,
     double? securityDeposit,
-    double? distanceFromCenter,
     double? rating,
     int? reviewCount,
     List<String>? amenities,
     List<String>? images,
     String? genderPreference,
-    bool? mealsIncluded,
-    double? mealPrice,
     List<String>? roomTypes,
     String? occupationType,
     String? ownerName,
     String? contactPhone,
     String? contactEmail,
-    String? checkInTime,
-    String? checkOutTime,
-    String? description,
     List<String>? houseRules,
     List<String>? nearbyLandmarks,
-    double? nearestStationDistance,
     bool? isVerified,
     bool? isFeatured,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? availableFrom,
+    int? totalRooms,
+    int? availableRooms,
   }) {
     return PGProperty(
       id: id ?? this.id,
@@ -279,21 +247,16 @@ class PGProperty {
       longitude: longitude ?? this.longitude,
       price: price ?? this.price,
       securityDeposit: securityDeposit ?? this.securityDeposit,
-      distanceFromCenter: distanceFromCenter ?? this.distanceFromCenter,
       rating: rating ?? this.rating,
       reviewCount: reviewCount ?? this.reviewCount,
       amenities: amenities ?? this.amenities,
       images: images ?? this.images,
       genderPreference: genderPreference ?? this.genderPreference,
-      mealsIncluded: mealsIncluded ?? this.mealsIncluded,
-      mealPrice: mealPrice ?? this.mealPrice,
       roomTypes: roomTypes ?? this.roomTypes,
       occupationType: occupationType ?? this.occupationType,
       ownerName: ownerName ?? this.ownerName,
       contactPhone: contactPhone ?? this.contactPhone,
       contactEmail: contactEmail ?? this.contactEmail,
-      checkInTime: checkInTime ?? this.checkInTime,
-      checkOutTime: checkOutTime ?? this.checkOutTime,
       description: description ?? this.description,
       houseRules: houseRules ?? this.houseRules,
       nearbyLandmarks: nearbyLandmarks ?? this.nearbyLandmarks,
@@ -303,6 +266,8 @@ class PGProperty {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       availableFrom: availableFrom ?? this.availableFrom,
+      totalRooms: totalRooms ?? this.totalRooms,
+      availableRooms: availableRooms ?? this.availableRooms,
     );
   }
 }

@@ -1,5 +1,8 @@
 // lib/shared/widgets/main_navigation_wrapper.dart
 import 'package:flutter/material.dart';
+import 'package:nearby_pg/features/offers/screens/offers_screen.dart';
+import 'package:nearby_pg/features/profile/screens/profile_screen.dart';
+import 'package:nearby_pg/features/search/screens/search_screen.dart';
 import '../../core/theme/app_theme.dart';
 import '../../features/home/screens/home_screen.dart';
 
@@ -16,9 +19,9 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
 
   final List<Widget> _pages = [
     const HomeScreen(),
-    const PlaceholderScreen(title: 'Search', icon: Icons.search),
-    const PlaceholderScreen(title: 'Offers', icon: Icons.local_offer),
-    const PlaceholderScreen(title: 'Profile', icon: Icons.person),
+    const SearchScreen(),
+    const OffersScreen(),
+    const ProfileScreen()
   ];
 
   @override
