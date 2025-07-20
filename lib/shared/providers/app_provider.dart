@@ -19,6 +19,8 @@ class AppProvider extends ChangeNotifier {
   // Service instances
   final CacheService _cacheService = CacheService();
 
+  bool _isFirstTime = true;
+
   // Getters
   ThemeMode get themeMode => _themeMode;
   bool get isFirstLaunch => _isFirstLaunch;
@@ -45,9 +47,8 @@ class AppProvider extends ChangeNotifier {
       // Load app state
       _isFirstLaunch =
           await _cacheService.getUserPreference<bool>('is_first_launch') ??
-          true;
-      _isOnboardingComplete =
-          await _cacheService.getUserPreference<bool>(
+              true;
+      _isOnboardingComplete = await _cacheService.getUserPreference<bool>(
             'is_onboarding_complete',
           ) ??
           false;
@@ -165,5 +166,10 @@ class AppProvider extends ChangeNotifier {
   /// Log out user
   Future<void> logout() async {
     await setLoggedIn(false);
+  }
+
+  void setFirstTime(bool bool) {
+    _isFirstTime = bool;
+    notifyListeners();
   }
 }

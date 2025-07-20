@@ -46,6 +46,7 @@ class AppConstants {
   static const String authLoginEndpoint = '/auth/login';
   static const String authVerifyOTPEndpoint = '/auth/verify-otp';
   static const String authSignupEndpoint = '/auth/signup';
+  static String editProfileRoute = '/edit-profile';
 
   // Splash Screen
   static const Duration splashDuration = Duration(seconds: 2);
@@ -92,6 +93,14 @@ class AppConstants {
     'ENVIRONMENT',
     defaultValue: 'development',
   );
+
+  static var shortCacheExpiry = const Duration(minutes: 30);
+  static var mediumCacheExpiry = const Duration(hours: 6);
+  static var longCacheExpiry = const Duration(days: 1);
+
+  static num defaultPageSize = 20;
+
+  static Duration debounceDelay = const Duration(milliseconds: 300);
 
   static bool get isProduction => environment == 'production';
   static bool get isDevelopment => environment == 'development';

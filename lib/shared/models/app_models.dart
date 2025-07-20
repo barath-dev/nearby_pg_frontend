@@ -587,9 +587,17 @@ class Booking {
   /// Refund amount (if applicable)
   final double? refundAmount;
 
+  final String? pgName;
+
+  final String? pgAddress;
+
+  final String? pgImage;
+
   /// Constructor
-  const Booking({
+  Booking({
     required this.bookingId,
+    required this.pgAddress,
+    required this.pgImage,
     required this.pgPropertyId,
     required this.userId,
     required this.roomType,
@@ -607,12 +615,15 @@ class Booking {
     required this.updatedAt,
     this.cancellationReason,
     this.refundAmount,
+    this.pgName,
   });
 
   /// Create from JSON
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
+      pgAddress: json['pgAddress'] as String,
       bookingId: json['bookingId'] as String,
+      pgImage: json['pgImage'] as String?,
       pgPropertyId: json['pgPropertyId'] as String,
       userId: json['userId'] as String,
       roomType: json['roomType'] as String,
@@ -632,6 +643,7 @@ class Booking {
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       cancellationReason: json['cancellationReason'] as String?,
       refundAmount: (json['refundAmount'] as num?)?.toDouble(),
+      pgName: json['pgName'] as String?,
     );
   }
 
@@ -640,6 +652,7 @@ class Booking {
     return {
       'bookingId': bookingId,
       'pgPropertyId': pgPropertyId,
+      'pgAddress': pgAddress,
       'userId': userId,
       'roomType': roomType,
       'checkInDate': checkInDate.toIso8601String(),
@@ -650,12 +663,14 @@ class Booking {
       'totalAmount': totalAmount,
       'status': status,
       'transactionId': transactionId,
+      'pgImage': pgImage,
       'specialRequests': specialRequests,
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'cancellationReason': cancellationReason,
       'refundAmount': refundAmount,
+      'pgName': pgName,
     };
   }
 
@@ -665,6 +680,9 @@ class Booking {
     String? pgPropertyId,
     String? userId,
     String? roomType,
+    String? pgAddress,
+    String? pgImage,
+    String? pgName,
     DateTime? checkInDate,
     DateTime? checkOutDate,
     double? monthlyRent,
@@ -682,12 +700,15 @@ class Booking {
   }) {
     return Booking(
       bookingId: bookingId ?? this.bookingId,
+      pgAddress: pgAddress ?? this.pgAddress,
       pgPropertyId: pgPropertyId ?? this.pgPropertyId,
       userId: userId ?? this.userId,
+      pgImage: pgImage ?? this.pgImage,
       roomType: roomType ?? this.roomType,
       checkInDate: checkInDate ?? this.checkInDate,
       checkOutDate: checkOutDate ?? this.checkOutDate,
       monthlyRent: monthlyRent ?? this.monthlyRent,
+      pgName: pgName ?? this.pgName,
       securityDeposit: securityDeposit ?? this.securityDeposit,
       additionalFees: additionalFees ?? this.additionalFees,
       totalAmount: totalAmount ?? this.totalAmount,

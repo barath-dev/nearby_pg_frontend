@@ -181,6 +181,74 @@ class CacheService {
     }
   }
 
+  /// Save search filters
+  Future<void> saveSearchFilters(SearchFilter filters) async {
+    try {
+      await _userPreferencesBox.put('search_filters', filters.toJson());
+    } catch (e) {
+      debugPrint('❌ Error saving search filters: $e');
+    }
+  }
+
+  /// Get saved search filters
+  Future<SearchFilter?> getSavedSearchFilters() async {
+    try {
+      final filters = _userPreferencesBox.get('search_filters');
+      if (filters != null) {
+        return SearchFilter.fromJson(Map<String, dynamic>.from(filters));
+      }
+    } catch (e) {
+      debugPrint('❌ Error getting saved search filters: $e');
+    }
+    return null;
+  }
+
+  /// Cache data with expiry
+  Future<void> setCache<T>(
+    String key,
+    T data, {
+    Duration? expiry,
+    String? category,
+  }) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final expiryTimestamp =
+          expiry != null ? timestamp + expiry.inMilliseconds : null;
+
+      await _cacheBox.put(key, {
+        'data': data,
+        'timestamp': timestamp,
+        'expiry': expiryTimestamp,
+        'category': category,
+      });
+    } catch (e) {
+      debugPrint('❌ Error setting cache: $e');
+    }
+  }
+
+  /// Get cached data
+  Future<T?> getCache<T>(String key) async {
+    try {
+      final cached = _cacheBox.get(key);
+      if (cached == null) return null;
+
+      final expiryTimestamp = cached['expiry'];
+      if (expiryTimestamp != null) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        if (now > expiryTimestamp) {
+          // Cache expired
+          await _cacheBox.delete(key);
+          return null;
+        }
+      }
+
+      return cached['data'] as T;
+    } catch (e) {
+      debugPrint('❌ Error getting cache: $e');
+      return null;
+    }
+  }
+
   // User Preferences Methods
 
   /// Save a user preference
@@ -298,6 +366,14 @@ class CacheService {
     } catch (e) {
       debugPrint('❌ Error getting cached wishlist: $e');
       return [];
+    }
+  }
+
+  Future<void> saveRecentSearches(List<String> recentSearches) async {
+    try {
+      await _userPreferencesBox.put('recent_searches', recentSearches);
+    } catch (e) {
+      debugPrint('❌ Error saving recent searches: $e');
     }
   }
 }

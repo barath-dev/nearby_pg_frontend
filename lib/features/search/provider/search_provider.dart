@@ -1,3 +1,4 @@
+// lib/features/search/provider/search_provider.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -88,11 +89,6 @@ class SearchProvider extends ChangeNotifier {
   Future<void> initialize() async {
     try {
       // Initialize services
-      await _apiService.initialize();
-      await _locationService.initialize();
-      await _cacheService.initialize();
-
-      // Load cached data
       await _loadCachedData();
 
       // Get current location
@@ -138,12 +134,7 @@ class SearchProvider extends ChangeNotifier {
   /// Load search suggestions
   Future<void> _loadSearchSuggestions() async {
     try {
-      final response = await _apiService.get('/search/suggestions');
-      _searchSuggestions = List<String>.from(response['data'] ?? []);
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error loading search suggestions: $e');
-      // Fallback to default suggestions
+      // For initial implementation, use fallback suggestions
       _searchSuggestions = [
         'PG near me',
         'Budget PG',
@@ -154,6 +145,9 @@ class SearchProvider extends ChangeNotifier {
         'Executive PG',
         'PG with gym',
       ];
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading search suggestions: $e');
     }
   }
 
@@ -208,24 +202,20 @@ class SearchProvider extends ChangeNotifier {
           ..removeWhere((key, value) => value == null)),
       };
 
-      final response = await _apiService.get(
-        AppConstants.pgSearchEndpoint,
-        queryParameters: queryParams,
-      );
-
-      final results =
-          (response['data'] as List)
-              .map((json) => PGProperty.fromJson(json))
-              .toList();
+      // For initial implementation, use mock data from ApiService
+      // In a real app, this would be an actual API call
+      final results = await _apiService.getMockNearbyPGs();
+      final List<PGProperty> pgResults =
+          results.map((json) => PGProperty.fromJson(json)).toList();
 
       if (isNewSearch) {
-        _searchResults = results;
+        _searchResults = pgResults;
       } else {
-        _searchResults.addAll(results);
+        _searchResults.addAll(pgResults);
       }
 
-      _totalResults = response['total'] ?? _searchResults.length;
-      _hasMoreResults = results.length >= AppConstants.defaultPageSize;
+      _totalResults = pgResults.length;
+      _hasMoreResults = pgResults.length >= AppConstants.defaultPageSize;
 
       // Update map markers
       _updateMapMarkers();
@@ -384,66 +374,63 @@ class SearchProvider extends ChangeNotifier {
   void filterResultsLocally(SearchFilter filters) {
     if (_searchResults.isEmpty) return;
 
-    _filteredResults =
-        _searchResults.where((pg) {
-          // Budget filter
-          if (filters.minBudget != null &&
-              pg.monthlyRent < filters.minBudget!) {
-            return false;
-          }
-          if (filters.maxBudget != null &&
-              pg.monthlyRent > filters.maxBudget!) {
-            return false;
-          }
+    _filteredResults = _searchResults.where((pg) {
+      // Budget filter
+      if (filters.minBudget != null && pg.price < filters.minBudget!) {
+        return false;
+      }
+      if (filters.maxBudget != null && pg.price > filters.maxBudget!) {
+        return false;
+      }
 
-          // Gender preference filter
-          if (filters.genderPreference != null &&
-              filters.genderPreference != GenderPreference.any &&
-              pg.genderPreference != filters.genderPreference &&
-              pg.genderPreference != GenderPreference.any) {
-            return false;
-          }
+      // Gender preference filter
+      if (filters.genderPreference != null &&
+          filters.genderPreference != 'ANY' &&
+          pg.genderPreference != filters.genderPreference &&
+          pg.genderPreference != 'ANY') {
+        return false;
+      }
 
-          // Room type filter
-          if (filters.roomTypes?.isNotEmpty == true) {
-            final hasMatchingRoomType = filters.roomTypes!.any(
-              (roomType) => pg.roomTypes.contains(roomType),
-            );
-            if (!hasMatchingRoomType) return false;
-          }
+      // Room type filter
+      if (filters.roomTypes?.isNotEmpty == true) {
+        final hasMatchingRoomType = filters.roomTypes!.any(
+          (roomType) => pg.roomTypes.contains(roomType),
+        );
+        if (!hasMatchingRoomType) return false;
+      }
 
-          // Amenities filter
-          if (filters.requiredAmenities?.isNotEmpty == true) {
-            final hasAllAmenities = filters.requiredAmenities!.every(
-              (amenity) => pg.amenities.contains(amenity),
-            );
-            if (!hasAllAmenities) return false;
-          }
+      // Amenities filter
+      if (filters.requiredAmenities?.isNotEmpty == true) {
+        final hasAllAmenities = filters.requiredAmenities!.every(
+          (amenity) => pg.amenities.contains(amenity),
+        );
+        if (!hasAllAmenities) return false;
+      }
 
-          // Meals filter
-          if (filters.mealsIncluded != null &&
-              pg.mealsIncluded != filters.mealsIncluded) {
-            return false;
-          }
+      // Meals filter
+      if (filters.mealsIncluded != null &&
+          pg.mealsIncluded != filters.mealsIncluded) {
+        return false;
+      }
 
-          // Rating filter
-          if (filters.minRating != null && pg.rating < filters.minRating!) {
-            return false;
-          }
+      // Rating filter
+      if (filters.minRating != null && pg.rating < filters.minRating!) {
+        return false;
+      }
 
-          // Distance filter
-          if (filters.maxDistance != null && _currentPosition != null) {
-            final distance = _locationService.calculateDistance(
-              _currentPosition!.latitude,
-              _currentPosition!.longitude,
-              pg.latitude,
-              pg.longitude,
-            );
-            if (distance > filters.maxDistance!) return false;
-          }
+      // Distance filter
+      if (filters.maxDistance != null && _currentPosition != null) {
+        final distance = _locationService.calculateDistance(
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
+          pg.latitude,
+          pg.longitude,
+        );
+        if (distance > filters.maxDistance!) return false;
+      }
 
-          return true;
-        }).toList();
+      return true;
+    }).toList();
 
     // Sort filtered results
     _sortResults(_filteredResults);
@@ -458,7 +445,7 @@ class SearchProvider extends ChangeNotifier {
 
       switch (_sortBy) {
         case 'price':
-          comparison = a.monthlyRent.compareTo(b.monthlyRent);
+          comparison = a.price.compareTo(b.price);
           break;
         case 'rating':
           comparison = a.rating.compareTo(b.rating);
@@ -611,15 +598,17 @@ class SearchProvider extends ChangeNotifier {
   }
 
   /// Get gender display name
-  String _getGenderDisplayName(GenderPreference gender) {
+  String _getGenderDisplayName(String gender) {
     switch (gender) {
-      case GenderPreference.male:
+      case 'MALE':
         return 'Male';
-      case GenderPreference.female:
+      case 'FEMALE':
         return 'Female';
-      case GenderPreference.coEd:
+      case 'CO_ED':
         return 'Co-ed';
-      case GenderPreference.any:
+      case 'ANY':
+        return 'Any';
+      default:
         return 'Any';
     }
   }

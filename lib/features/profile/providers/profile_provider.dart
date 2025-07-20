@@ -29,7 +29,7 @@ class ProfileProvider extends ChangeNotifier {
   List<PGProperty> _wishlistPGs = [];
 
   // Profile statistics
-  ProfileStats _profileStats = const ProfileStats();
+  ProfileStats _profileStats = ProfileStats();
 
   // Settings
   AppSettings _appSettings = const AppSettings();
