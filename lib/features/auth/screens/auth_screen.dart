@@ -2,11 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/navigation_service.dart';
 
-// Login Screen
+/// Enhanced implementation of the Login Screen
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -479,7 +480,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 }
 
-// Signup Screen
+/// Enhanced implementation of the Signup Screen
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -1010,7 +1011,7 @@ class _SignupScreenState extends State<SignupScreen>
   }
 }
 
-// OTP Verification Screen
+/// OTP Verification Screen
 class OTPVerificationScreen extends StatefulWidget {
   final Map<String, dynamic> arguments;
 

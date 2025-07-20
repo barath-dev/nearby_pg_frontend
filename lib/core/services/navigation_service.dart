@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:nearby_pg/features/auth/screens/auth_screen.dart';
 
 // Import screens
 import '../../shared/widgets/splash_screen.dart';
 import '../../shared/widgets/main_navigation_wrapper.dart';
-import '../../features/auth/screens/.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/search/screens/search_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';

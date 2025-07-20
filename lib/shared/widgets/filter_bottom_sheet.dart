@@ -115,6 +115,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             '₹${(_currentFilters.minBudget ?? AppConstants.minBudgetRange).toInt()}',
             '₹${(_currentFilters.maxBudget ?? AppConstants.maxBudgetRange).toInt()}',
           ),
+          activeColor: AppTheme.emeraldGreen,
+          inactiveColor: AppTheme.gray300,
           onChanged: (values) {
             setState(() {
               _currentFilters = _currentFilters.copyWith(
@@ -174,6 +176,14 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   },
                   selectedColor: AppTheme.lightMint,
                   checkmarkColor: AppTheme.emeraldGreen,
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(
+                      color:
+                          isSelected ? AppTheme.emeraldGreen : AppTheme.gray300,
+                    ),
+                  ),
                 );
               }).toList(),
         ),
@@ -194,7 +204,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           spacing: 8,
           runSpacing: 8,
           children:
-              RoomType.values.map((roomType) {
+              RoomType.values.where((type) => type != RoomType.other).map((
+                roomType,
+              ) {
                 final isSelected =
                     _currentFilters.roomTypes?.contains(roomType) ?? false;
                 return FilterChip(
@@ -218,6 +230,14 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   },
                   selectedColor: AppTheme.lightMint,
                   checkmarkColor: AppTheme.emeraldGreen,
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(
+                      color:
+                          isSelected ? AppTheme.emeraldGreen : AppTheme.gray300,
+                    ),
+                  ),
                 );
               }).toList(),
         ),
@@ -238,33 +258,47 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           spacing: 8,
           runSpacing: 8,
           children:
-              AmenityType.values.map((amenity) {
-                final isSelected =
-                    _currentFilters.requiredAmenities?.contains(amenity) ??
-                    false;
-                return FilterChip(
-                  label: Text(_getAmenityDisplayName(amenity)),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      final currentAmenities = List<AmenityType>.from(
-                        _currentFilters.requiredAmenities ?? [],
-                      );
-                      if (selected) {
-                        currentAmenities.add(amenity);
-                      } else {
-                        currentAmenities.remove(amenity);
-                      }
-                      _currentFilters = _currentFilters.copyWith(
-                        requiredAmenities:
-                            currentAmenities.isEmpty ? null : currentAmenities,
-                      );
-                    });
-                  },
-                  selectedColor: AppTheme.lightMint,
-                  checkmarkColor: AppTheme.emeraldGreen,
-                );
-              }).toList(),
+              AmenityType.values.where((type) => type != AmenityType.other).map(
+                (amenity) {
+                  final isSelected =
+                      _currentFilters.requiredAmenities?.contains(amenity) ??
+                      false;
+                  return FilterChip(
+                    label: Text(_getAmenityDisplayName(amenity)),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        final currentAmenities = List<AmenityType>.from(
+                          _currentFilters.requiredAmenities ?? [],
+                        );
+                        if (selected) {
+                          currentAmenities.add(amenity);
+                        } else {
+                          currentAmenities.remove(amenity);
+                        }
+                        _currentFilters = _currentFilters.copyWith(
+                          requiredAmenities:
+                              currentAmenities.isEmpty
+                                  ? null
+                                  : currentAmenities,
+                        );
+                      });
+                    },
+                    selectedColor: AppTheme.lightMint,
+                    checkmarkColor: AppTheme.emeraldGreen,
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(
+                        color:
+                            isSelected
+                                ? AppTheme.emeraldGreen
+                                : AppTheme.gray300,
+                      ),
+                    ),
+                  );
+                },
+              ).toList(),
         ),
       ],
     );
@@ -294,6 +328,16 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 },
                 selectedColor: AppTheme.lightMint,
                 checkmarkColor: AppTheme.emeraldGreen,
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                    color:
+                        _currentFilters.mealsIncluded == true
+                            ? AppTheme.emeraldGreen
+                            : AppTheme.gray300,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 8),
@@ -310,6 +354,16 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 },
                 selectedColor: AppTheme.lightMint,
                 checkmarkColor: AppTheme.emeraldGreen,
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                    color:
+                        _currentFilters.mealsIncluded == false
+                            ? AppTheme.emeraldGreen
+                            : AppTheme.gray300,
+                  ),
+                ),
               ),
             ),
           ],
@@ -333,6 +387,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           max: 5.0,
           divisions: 10,
           label: (_currentFilters.minRating ?? 0.0).toStringAsFixed(1),
+          activeColor: AppTheme.emeraldGreen,
+          inactiveColor: AppTheme.gray300,
           onChanged: (value) {
             setState(() {
               _currentFilters = _currentFilters.copyWith(
@@ -368,6 +424,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           divisions: 49,
           label:
               '${(_currentFilters.maxDistance ?? AppConstants.maxSearchRadius).toInt()} km',
+          activeColor: AppTheme.emeraldGreen,
+          inactiveColor: AppTheme.gray300,
           onChanged: (value) {
             setState(() {
               _currentFilters = _currentFilters.copyWith(maxDistance: value);
@@ -391,23 +449,40 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: AppTheme.gray200)),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: _clearAllFilters,
-              child: const Text('Reset'),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _clearAllFilters,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.emeraldGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Reset'),
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 2,
-            child: ElevatedButton(
-              onPressed: _applyFilters,
-              child: const Text('Apply Filters'),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 2,
+              child: ElevatedButton(
+                onPressed: _applyFilters,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.emeraldGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Apply Filters'),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -447,8 +522,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       case RoomType.dormitory:
         return 'Dormitory';
       case RoomType.other:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return 'Other';
     }
   }
 
@@ -479,10 +553,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       case AmenityType.studyRoom:
         return 'Study Room';
       case AmenityType.recreationRoom:
-        return 'Recreation';
+        return 'Recreation Room';
       case AmenityType.other:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return 'Other';
     }
   }
 }
