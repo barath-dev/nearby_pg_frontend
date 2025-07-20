@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 
 // Import providers and models
@@ -10,6 +11,7 @@ import '../../../shared/models/app_models.dart';
 import '../../../shared/widgets/pg_card.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/services/navigation_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,29 +21,24 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
-  final CarouselSliderController _carouselController =
-      CarouselSliderController();
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
+  final PageController _carouselController = PageController();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebouncer;
   Timer? _bannerTimer;
+  int _currentBannerIndex = 0;
+  bool _isExpanded = false;
 
-  // Animation controllers
-  late AnimationController _fadeController;
-  late AnimationController _slideController;
+  // For animations
+  late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Responsive dimensions
-  late double screenWidth;
-  late double screenHeight;
-  late bool isSmallScreen;
-  late bool isTablet;
-
-  // UI state
-  bool _isRefreshing = false;
-  int _currentBannerIndex = 0;
+  // Responsive values
+  double get horizontalPadding => isSmallScreen ? 16.0 : 20.0;
+  double get verticalSpacing => isSmallScreen ? 16.0 : 24.0;
+  bool get isSmallScreen => MediaQuery.of(context).size.width < 360;
 
   @override
   bool get wantKeepAlive => true;
@@ -49,150 +46,128 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _initializeAnimations();
+    _setupAnimations();
+    _initializeHomeData();
     _setupScrollListener();
-    _initializeScreen();
-    _startBannerAutoplay();
+    _setupBannerTimer();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _updateScreenDimensions();
-  }
-
-  void _initializeAnimations() {
-    _fadeController = AnimationController(
+  void _setupAnimations() {
+    _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
     );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
+      begin: const Offset(0, 0.1),
       end: Offset.zero,
     ).animate(
-      CurvedAnimation(parent: _slideController, curve: Curves.elasticOut),
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
+      ),
     );
 
-    // Start animations
-    _fadeController.forward();
-    _slideController.forward();
+    _animationController.forward();
   }
 
-  void _updateScreenDimensions() {
-    final mediaQuery = MediaQuery.of(context);
-    screenWidth = mediaQuery.size.width;
-    screenHeight = mediaQuery.size.height;
-    isSmallScreen = screenWidth < 375;
-    isTablet = screenWidth > 600;
-  }
-
-  void _initializeScreen() {
+  void _initializeHomeData() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _performInitialization();
-      }
+      context.read<HomeProvider>().initialize();
     });
-  }
-
-  Future<void> _performInitialization() async {
-    try {
-      await context.read<HomeProvider>().initialize();
-    } catch (error) {
-      debugPrint('Home initialization error: $error');
-      if (mounted) {
-        _showErrorSnackBar('Failed to load data. Please try again.');
-      }
-    }
   }
 
   void _setupScrollListener() {
     _scrollController.addListener(() {
-      if (!mounted) return;
-
-      // Load more when approaching the end
       if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 200) {
-        context.read<HomeProvider>().loadMorePGs().catchError((error) {
-          debugPrint('Load more error: $error');
-        });
+          _scrollController.position.maxScrollExtent - 300) {
+        context.read<HomeProvider>().loadMorePGs();
       }
-
-      // Hide/show FAB based on scroll position
-      setState(() {
-        // Update any scroll-dependent UI state here
-      });
     });
   }
 
-  void _startBannerAutoplay() {
-    _bannerTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (mounted) {
-        final provider = context.read<HomeProvider>();
-        if (provider.banners.isNotEmpty) {
-          final nextIndex = (_currentBannerIndex + 1) % provider.banners.length;
-          _carouselController.animateToPage(nextIndex);
-        }
+  void _setupBannerTimer() {
+    _bannerTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      final provider = context.read<HomeProvider>();
+      if (provider.banners.isEmpty) return;
+
+      if (_carouselController.hasClients) {
+        final nextPage = (_currentBannerIndex + 1) % provider.banners.length;
+        _carouselController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOut,
+        );
       }
     });
   }
 
   @override
   void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    _carouselController.dispose();
     _searchDebouncer?.cancel();
     _bannerTimer?.cancel();
-    _scrollController.dispose();
-    _searchController.dispose();
-    _fadeController.dispose();
-    _slideController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
-  // Responsive helpers
-  double get horizontalPadding =>
-      isSmallScreen
-          ? 16.0
-          : isTablet
-          ? 24.0
-          : 20.0;
-  double get verticalSpacing => isSmallScreen ? 12.0 : 16.0;
-  double get cardRadius => 12.0;
-  double get buttonRadius => 8.0;
+  void _handleSearch(String query) {
+    if (query.trim().isEmpty) return;
+
+    _searchDebouncer?.cancel();
+    _searchDebouncer = Timer(const Duration(milliseconds: 500), () {
+      Navigator.pushNamed(
+        context,
+        AppConstants.searchRoute,
+        arguments: {'query': query},
+      );
+    });
+  }
+
+  void _navigateToPGDetail(String pgId) {
+    Navigator.pushNamed(context, AppConstants.pgDetailRoute, arguments: pgId);
+  }
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-    _updateScreenDimensions();
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
 
     return Scaffold(
       backgroundColor: AppTheme.lightGray,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _handleRefresh,
-          color: AppTheme.emeraldGreen,
-          backgroundColor: Colors.white,
-          displacement: 60,
+      body: NestedScrollView(
+        controller: _scrollController,
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            _buildSliverAppBar(),
+            SliverPersistentHeader(
+              delegate: _SliverSearchBarDelegate(
+                child: _buildSearchBar(),
+                minHeight: 80,
+                maxHeight: 80,
+              ),
+              pinned: true,
+            ),
+          ];
+        },
+        body: RefreshIndicator(
+          onRefresh: () => context.read<HomeProvider>().refresh(),
           child: CustomScrollView(
-            controller: _scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
+            physics: const BouncingScrollPhysics(),
             slivers: [
-              _buildSliverAppBar(),
-              SliverToBoxAdapter(child: SizedBox(height: verticalSpacing)),
-              SliverToBoxAdapter(child: _buildSearchSection()),
               SliverToBoxAdapter(child: _buildQuickActions()),
               SliverToBoxAdapter(child: _buildBannerSection()),
-              SliverToBoxAdapter(child: _buildFeaturedSection()),
-              _buildMainContent(),
+              _buildFeaturedPGsSection(),
+              _buildNearbyPGsSection(),
+              _buildRecommendedPGsSection(),
               SliverToBoxAdapter(
                 child: SizedBox(
                   height: 100 + MediaQuery.of(context).padding.bottom,
@@ -213,6 +188,10 @@ class _HomeScreenState extends State<HomeScreen>
       pinned: true,
       expandedHeight: 80,
       toolbarHeight: 70,
+      systemOverlayStyle: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
       flexibleSpace: FlexibleSpaceBar(
         title: Container(
           padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
@@ -278,10 +257,9 @@ class _HomeScreenState extends State<HomeScreen>
               style: TextStyle(
                 color: AppTheme.emeraldGreen,
                 fontWeight: FontWeight.w800,
-                fontSize: isSmallScreen ? 16 : 18,
+                fontSize: isSmallScreen ? 18 : 20,
                 letterSpacing: 0.5,
               ),
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -292,71 +270,68 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildLocationButton() {
     return Consumer<HomeProvider>(
       builder: (context, provider, _) {
+        final hasLocation = provider.currentLocation != null;
+        final locationName =
+            hasLocation ? provider.currentLocation! : 'Set Location';
+
         return FadeTransition(
           opacity: _fadeAnimation,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: _showLocationPicker,
-              borderRadius: BorderRadius.circular(20),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                constraints: BoxConstraints(maxWidth: screenWidth * 0.35),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+          child: GestureDetector(
+            onTap: () {
+              // Handle location selection
+              _showLocationBottomSheet();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color:
+                    hasLocation
+                        ? AppTheme.emeraldGreen.withOpacity(0.1)
+                        : Colors.grey[200],
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color:
+                      hasLocation
+                          ? AppTheme.emeraldGreen.withOpacity(0.3)
+                          : Colors.grey[300]!,
                 ),
-                decoration: BoxDecoration(
-                  color: AppTheme.emeraldGreen.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: AppTheme.emeraldGreen.withOpacity(0.2),
-                    width: 1,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 16,
+                    color:
+                        hasLocation ? AppTheme.emeraldGreen : Colors.grey[600],
                   ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (provider.isLocationLoading)
-                      SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppTheme.emeraldGreen,
-                          ),
-                        ),
-                      )
-                    else
-                      Icon(
-                        Icons.location_on_rounded,
-                        size: 14,
-                        color: AppTheme.emeraldGreen,
-                      ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        provider.currentLocationName.isNotEmpty
-                            ? provider.currentLocationName
-                            : 'Location',
-                        style: TextStyle(
-                          color: AppTheme.emeraldGreen,
-                          fontSize: isSmallScreen ? 11 : 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  const SizedBox(width: 4),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.3,
                     ),
-                    const SizedBox(width: 2),
-                    Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: 14,
-                      color: AppTheme.emeraldGreen,
+                    child: Text(
+                      locationName,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color:
+                            hasLocation
+                                ? AppTheme.emeraldGreen
+                                : Colors.grey[600],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 14,
+                    color:
+                        hasLocation ? AppTheme.emeraldGreen : Colors.grey[600],
+                  ),
+                ],
               ),
             ),
           ),
@@ -365,84 +340,85 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildSearchSection() {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
-        child: Material(
-          elevation: 2,
-          borderRadius: BorderRadius.circular(cardRadius),
-          shadowColor: Colors.black.withOpacity(0.1),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(cardRadius),
-              border: Border.all(color: Colors.grey.withOpacity(0.2)),
-            ),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search PGs, areas, amenities...',
-                hintStyle: TextStyle(
-                  color: Colors.grey[500],
-                  fontSize: isSmallScreen ? 14 : 15,
-                ),
-                prefixIcon: Container(
-                  margin: const EdgeInsets.all(12),
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: AppTheme.emeraldGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+  Widget _buildSearchBar() {
+    return Container(
+      width: double.infinity,
+      color: Colors.white,
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: 16,
+      ),
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppTheme.gray50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.gray200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: 12),
+              const Icon(Icons.search, color: AppTheme.gray500, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: const InputDecoration(
+                    hintText: 'Search PGs, locations, amenities...',
+                    hintStyle: TextStyle(
+                      color: AppTheme.gray400,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(vertical: 15),
                   ),
-                  child: Icon(
-                    Icons.search_rounded,
-                    color: AppTheme.emeraldGreen,
-                    size: 18,
+                  style: const TextStyle(
+                    color: AppTheme.deepCharcoal,
+                    fontSize: 14,
                   ),
-                ),
-                suffixIcon:
-                    _searchController.text.isNotEmpty
-                        ? IconButton(
-                          icon: Icon(
-                            Icons.clear_rounded,
-                            color: Colors.grey[500],
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            _searchController.clear();
-                            _handleSearch('');
-                          },
-                        )
-                        : Container(
-                          margin: const EdgeInsets.all(8),
-                          child: Material(
-                            color: AppTheme.emeraldGreen,
-                            borderRadius: BorderRadius.circular(8),
-                            child: InkWell(
-                              onTap: _showFilters,
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                child: const Icon(
-                                  Icons.tune_rounded,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: isSmallScreen ? 14 : 16,
+                  onChanged: _handleSearch,
+                  onTap: () {
+                    // Navigate to search screen for better UX
+                    Navigator.pushNamed(context, AppConstants.searchRoute);
+                  },
                 ),
               ),
-              onChanged: _handleSearch,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (value) => _handleSearch(value),
-            ),
+              const SizedBox(width: 8),
+              Container(
+                margin: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppTheme.emeraldGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.tune,
+                    color: AppTheme.emeraldGreen,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    // Show filters
+                    _showFilters();
+                  },
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
+                  padding: EdgeInsets.zero,
+                  splashRadius: 20,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -450,98 +426,129 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildQuickActions() {
-    final actions = [
+    final List<Map<String, dynamic>> actions = [
       {
-        'icon': Icons.man_rounded,
-        'label': 'Boys PG',
-        'color': AppTheme.emeraldGreen,
+        'icon': Icons.apartment,
+        'label': 'PG Hostels',
+        'color': Colors.blue,
+        'onTap': () {
+          // Navigate to PG hostels filter
+          Navigator.pushNamed(
+            context,
+            AppConstants.searchRoute,
+            arguments: {'filter': 'hostels'},
+          );
+        },
       },
       {
-        'icon': Icons.woman_rounded,
-        'label': 'Girls PG',
-        'color': const Color(0xFFE91E63),
+        'icon': Icons.location_city,
+        'label': 'Apartments',
+        'color': Colors.orange,
+        'onTap': () {
+          // Navigate to apartments filter
+          Navigator.pushNamed(
+            context,
+            AppConstants.searchRoute,
+            arguments: {'filter': 'apartments'},
+          );
+        },
       },
       {
-        'icon': Icons.apartment_rounded,
-        'label': 'Co-living',
-        'color': const Color(0xFFFF9800),
+        'icon': Icons.food_bank,
+        'label': 'With Meals',
+        'color': Colors.green,
+        'onTap': () {
+          // Navigate to with meals filter
+          Navigator.pushNamed(
+            context,
+            AppConstants.searchRoute,
+            arguments: {'filter': 'meals'},
+          );
+        },
       },
       {
-        'icon': Icons.stars_rounded,
+        'icon': Icons.star,
         'label': 'Premium',
-        'color': const Color(0xFF9C27B0),
+        'color': Colors.purple,
+        'onTap': () {
+          // Navigate to premium filter
+          Navigator.pushNamed(
+            context,
+            AppConstants.searchRoute,
+            arguments: {'filter': 'premium'},
+          );
+        },
+      },
+      {
+        'icon': Icons.local_offer,
+        'label': 'Offers',
+        'color': Colors.red,
+        'onTap': () {
+          // Navigate to offers
+          Navigator.pushNamed(context, AppConstants.offersRoute);
+        },
       },
     ];
 
-    return SlideTransition(
-      position: _slideAnimation,
-      child: Container(
-        margin: EdgeInsets.all(horizontalPadding),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final itemWidth = (constraints.maxWidth - (3 * 8)) / 4;
-
-            return Row(
-              children:
-                  actions.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final action = entry.value;
-
-                    return Expanded(
-                      child: AnimatedContainer(
-                        duration: Duration(milliseconds: 200 + (index * 100)),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Material(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(buttonRadius),
-                          elevation: 1,
-                          shadowColor: Colors.black.withOpacity(0.1),
-                          child: InkWell(
-                            onTap:
-                                () => _handleQuickAction(
-                                  action['label'] as String,
+    return Container(
+      height: 110,
+      margin: EdgeInsets.symmetric(vertical: verticalSpacing),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Consumer<HomeProvider>(
+          builder: (context, provider, _) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children:
+                    actions.map((action) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: InkWell(
+                          onTap: action['onTap'] as VoidCallback,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: isSmallScreen ? 70 : 80,
+                            padding: EdgeInsets.symmetric(
+                              vertical: isSmallScreen ? 12 : 14,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: (action['color'] as Color)
+                                        .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    action['icon'] as IconData,
+                                    color: action['color'] as Color,
+                                    size: isSmallScreen ? 20 : 22,
+                                  ),
                                 ),
-                            borderRadius: BorderRadius.circular(buttonRadius),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                vertical: isSmallScreen ? 12 : 14,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: (action['color'] as Color)
-                                          .withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      action['icon'] as IconData,
-                                      color: action['color'] as Color,
-                                      size: isSmallScreen ? 20 : 22,
-                                    ),
+                                SizedBox(height: isSmallScreen ? 4 : 6),
+                                Text(
+                                  action['label'] as String,
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 10 : 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[700],
                                   ),
-                                  SizedBox(height: isSmallScreen ? 4 : 6),
-                                  Text(
-                                    action['label'] as String,
-                                    style: TextStyle(
-                                      fontSize: isSmallScreen ? 10 : 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey[700],
-                                    ),
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  }).toList(),
+                      );
+                    }).toList(),
+              ),
             );
           },
         ),
@@ -563,672 +570,768 @@ class _HomeScreenState extends State<HomeScreen>
               horizontal: horizontalPadding,
               vertical: verticalSpacing,
             ),
-            height: isSmallScreen ? 110 : 130,
-            child: Stack(
+            height: isSmallScreen ? 150 : 180,
+            child: Column(
               children: [
-                CarouselSlider.builder(
-                  carouselController: _carouselController,
-                  itemCount: provider.banners.length,
-                  itemBuilder: (context, index, realIndex) {
-                    final banner = provider.banners[index];
-                    return _buildBannerCard(banner);
-                  },
-                  options: CarouselOptions(
-                    height: double.infinity,
-                    viewportFraction: 0.95,
-                    autoPlay: false, // Controlled manually
-                    enlargeCenterPage: true,
-                    onPageChanged: (index, reason) {
+                Expanded(
+                  child: PageView.builder(
+                    controller: _carouselController,
+                    itemCount: provider.banners.length,
+                    onPageChanged: (index) {
                       setState(() {
                         _currentBannerIndex = index;
                       });
                     },
-                  ),
-                ),
-
-                // Page indicator
-                if (provider.banners.length > 1)
-                  Positioned(
-                    bottom: 8,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: AnimatedSmoothIndicator(
-                        activeIndex: _currentBannerIndex,
-                        count: provider.banners.length,
-                        effect: WormEffect(
-                          dotColor: Colors.white.withOpacity(0.5),
-                          activeDotColor: Colors.white,
-                          dotHeight: 6,
-                          dotWidth: 6,
-                          spacing: 4,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildBannerCard(PromotionalBanner banner) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppTheme.emeraldGreen,
-            AppTheme.secondaryGreen,
-            AppTheme.lightMint,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(cardRadius),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.emeraldGreen.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _handleBannerTap(banner),
-          borderRadius: BorderRadius.circular(cardRadius),
-          child: Padding(
-            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        banner.title,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isSmallScreen ? 16 : 18,
-                          fontWeight: FontWeight.w700,
-                          height: 1.2,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        banner.subtitle,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: isSmallScreen ? 12 : 13,
-                          height: 1.3,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Material(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  child: InkWell(
-                    onTap: () => _handleBannerTap(banner),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isSmallScreen ? 12 : 16,
-                        vertical: isSmallScreen ? 8 : 10,
-                      ),
-                      child: Text(
-                        banner.actionText,
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 11 : 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.emeraldGreen,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeaturedSection() {
-    return Consumer<HomeProvider>(
-      builder: (context, provider, _) {
-        if (provider.featuredPGs.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        return SlideTransition(
-          position: _slideAnimation,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: verticalSpacing),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Featured PGs',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 20 : 22,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.deepCharcoal,
-                        ),
-                      ),
-                    ),
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => _navigateToAllFeatured(),
-                        borderRadius: BorderRadius.circular(20),
+                    itemBuilder: (context, index) {
+                      final banner = provider.banners[index];
+                      return GestureDetector(
+                        onTap: () {
+                          // Handle banner click
+                          if (banner.actionUrl.isNotEmpty) {
+                            // Navigate or handle action
+                          }
+                        },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                          clipBehavior: Clip.antiAlias,
+                          child: Stack(
                             children: [
-                              Text(
-                                'View All',
-                                style: TextStyle(
-                                  color: AppTheme.emeraldGreen,
-                                  fontSize: isSmallScreen ? 12 : 13,
-                                  fontWeight: FontWeight.w600,
+                              // Banner image
+                              Positioned.fill(
+                                child: Image.network(
+                                  banner.imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey[300],
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.image_not_supported,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.arrow_forward_rounded,
-                                size: 16,
-                                color: AppTheme.emeraldGreen,
+
+                              // Gradient overlay for text visibility
+                              Positioned.fill(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withOpacity(0.6),
+                                      ],
+                                      stops: const [0.6, 1.0],
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              // Banner text content
+                              Positioned(
+                                bottom: 16,
+                                left: 16,
+                                right: 16,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (banner.title.isNotEmpty)
+                                      Text(
+                                        banner.title,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          shadows: [
+                                            Shadow(
+                                              blurRadius: 2,
+                                              color: Colors.black,
+                                              offset: Offset(0, 1),
+                                            ),
+                                          ],
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    if (banner.description.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        banner.description,
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.9),
+                                          fontSize: 12,
+                                          shadows: const [
+                                            Shadow(
+                                              blurRadius: 2,
+                                              color: Colors.black,
+                                              offset: Offset(0, 1),
+                                            ),
+                                          ],
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: verticalSpacing / 2),
-              SizedBox(
-                height: isSmallScreen ? 260 : 280,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: horizontalPadding - 8,
+                      );
+                    },
                   ),
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: provider.featuredPGs.length,
-                  itemBuilder: (context, index) {
-                    final pg = provider.featuredPGs[index];
-                    return Container(
-                      width:
-                          isSmallScreen
-                              ? screenWidth * 0.8
-                              : screenWidth * 0.75,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      child: PGCard(
-                        pgProperty: pg,
-                        onTap: () => _navigateToPGDetail(pg.id),
-                        onWishlistTap: () => _toggleWishlist(pg.id),
-                        onContactTap: () => _contactPG(pg),
-                        variant: PGCardVariant.standard,
-                      ),
-                    );
-                  },
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                // Page indicator
+                Center(
+                  child: SmoothPageIndicator(
+                    controller: _carouselController,
+                    count: provider.banners.length,
+                    effect: ExpandingDotsEffect(
+                      activeDotColor: AppTheme.emeraldGreen,
+                      dotColor: Colors.grey[300]!,
+                      dotHeight: 8,
+                      dotWidth: 8,
+                      expansionFactor: 3,
+                      spacing: 4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildMainContent() {
+  Widget _buildFeaturedPGsSection() {
+    return Consumer<HomeProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoading && provider.featuredPGs.isEmpty) {
+          return SliverToBoxAdapter(child: _buildLoadingPGCards());
+        }
+
+        if (provider.featuredPGs.isEmpty) {
+          return const SliverToBoxAdapter(child: SizedBox.shrink());
+        }
+
+        return SliverToBoxAdapter(
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Featured PGs',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.deepCharcoal,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // Navigate to featured PGs list
+                          Navigator.pushNamed(
+                            context,
+                            AppConstants.searchRoute,
+                            arguments: {'filter': 'featured'},
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.emeraldGreen,
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        child: const Text('View All'),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 280,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                      vertical: 8,
+                    ),
+                    itemCount: provider.featuredPGs.length,
+                    itemBuilder: (context, index) {
+                      final pg = provider.featuredPGs[index];
+                      return Container(
+                        width: 220,
+                        margin: const EdgeInsets.only(right: 16),
+                        child: PGCard(
+                          pgProperty: pg,
+                          onTap: () => _navigateToPGDetail(pg.id),
+                          variant: PGCardVariant.compact,
+                          isWishlisted: provider.isWishlisted(pg.id),
+                          onWishlistTap: () => provider.toggleWishlist(pg.id),
+                          showDistance: true,
+                          distance: pg.distanceFromCenter,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNearbyPGsSection() {
+    return Consumer<HomeProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoading && provider.nearbyPGs.isEmpty) {
+          return SliverToBoxAdapter(child: _buildLoadingPGCards());
+        }
+
+        if (provider.nearbyPGs.isEmpty && !provider.isLoading) {
+          return const SliverToBoxAdapter(child: SizedBox.shrink());
+        }
+
+        return SliverToBoxAdapter(
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Nearby PGs',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.deepCharcoal,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // Navigate to nearby PGs list
+                          Navigator.pushNamed(
+                            context,
+                            AppConstants.searchRoute,
+                            arguments: {'filter': 'nearby'},
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.emeraldGreen,
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        child: const Text('View All'),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 280,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                      vertical: 8,
+                    ),
+                    itemCount: provider.nearbyPGs.length,
+                    itemBuilder: (context, index) {
+                      final pg = provider.nearbyPGs[index];
+                      return Container(
+                        width: 220,
+                        margin: const EdgeInsets.only(right: 16),
+                        child: PGCard(
+                          pgProperty: pg,
+                          onTap: () => _navigateToPGDetail(pg.id),
+                          variant: PGCardVariant.compact,
+                          isWishlisted: provider.isWishlisted(pg.id),
+                          onWishlistTap: () => provider.toggleWishlist(pg.id),
+                          showDistance: true,
+                          distance: pg.distanceFromCenter,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRecommendedPGsSection() {
     return Consumer<HomeProvider>(
       builder: (context, provider, _) {
         if (provider.isLoading && provider.pgList.isEmpty) {
-          return SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: _buildLoadingState(),
-            ),
-          );
-        }
-
-        if (provider.hasError) {
-          return SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: _buildErrorWidget(provider.errorMessage),
-            ),
-          );
-        }
-
-        if (provider.pgList.isEmpty) {
-          return SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: _buildEmptyWidget(),
-            ),
-          );
-        }
-
-        return SliverPadding(
-          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-          sliver: SliverList(
+          return SliverList(
             delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                if (index < provider.pgList.length) {
-                  final pg = provider.pgList[index];
-                  return FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Container(
-                      margin: EdgeInsets.only(bottom: verticalSpacing),
-                      child: PGCard(
-                        pgProperty: pg,
-                        onTap: () => _navigateToPGDetail(pg.id),
-                        onWishlistTap: () => _toggleWishlist(pg.id),
-                        onContactTap: () => _contactPG(pg),
-                        variant: PGCardVariant.detailed,
-                      ),
-                    ),
-                  );
-                } else if (provider.isLoadingMore) {
-                  return Container(
-                    padding: const EdgeInsets.all(20),
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        color: AppTheme.emeraldGreen,
-                      ),
-                    ),
-                  );
-                }
-                return null;
-              },
-              childCount:
-                  provider.pgList.length + (provider.isLoadingMore ? 1 : 0),
+              (context, index) => _buildLoadingPGCard(),
+              childCount: 3,
             ),
+          );
+        }
+
+        if (provider.pgList.isEmpty && !provider.isLoading) {
+          return SliverToBoxAdapter(child: _buildEmptyState());
+        }
+
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              if (index == 0) {
+                return Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    verticalSpacing,
+                    horizontalPadding,
+                    8,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Recommended For You',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.deepCharcoal,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // Navigate to recommended list
+                          Navigator.pushNamed(
+                            context,
+                            AppConstants.searchRoute,
+                            arguments: {'filter': 'recommended'},
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.emeraldGreen,
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        child: const Text('View All'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final pgIndex = index - 1;
+              if (pgIndex < provider.pgList.length) {
+                final pg = provider.pgList[pgIndex];
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: Offset(0, 0.05 * (pgIndex % 3 + 1)),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: _animationController,
+                      curve: Interval(
+                        0.2 + (pgIndex % 3) * 0.1,
+                        1.0,
+                        curve: Curves.easeOutCubic,
+                      ),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                      vertical: 8,
+                    ),
+                    child: PGCard(
+                      pgProperty: pg,
+                      onTap: () => _navigateToPGDetail(pg.id),
+                      variant: PGCardVariant.standard,
+                      isWishlisted: provider.isWishlisted(pg.id),
+                      onWishlistTap: () => provider.toggleWishlist(pg.id),
+                      showDistance: true,
+                      distance: pg.distanceFromCenter,
+                    ),
+                  ),
+                );
+              }
+
+              // Show loading indicator at the end
+              if (pgIndex == provider.pgList.length && provider.isLoadingMore) {
+                return Padding(
+                  padding: EdgeInsets.all(verticalSpacing),
+                  child: const Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              return null;
+            },
+            childCount:
+                provider.pgList.length + 1 + (provider.isLoadingMore ? 1 : 0),
           ),
         );
       },
     );
   }
 
-  Widget _buildLoadingState() {
+  Widget _buildLoadingPGCards() {
     return Container(
-      padding: EdgeInsets.all(horizontalPadding * 2),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
+      height: 280,
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: verticalSpacing,
+      ),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: 3,
+        itemBuilder: (context, index) {
+          return Container(
+            width: 220,
+            margin: const EdgeInsets.only(right: 16),
             decoration: BoxDecoration(
-              color: AppTheme.emeraldGreen.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(50),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            child: SizedBox(
-              width: 40,
-              height: 40,
-              child: CircularProgressIndicator(
-                color: AppTheme.emeraldGreen,
-                strokeWidth: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 16,
+                        width: 150,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 12,
+                        width: 180,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            height: 14,
+                            width: 80,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          Container(
+                            height: 20,
+                            width: 70,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLoadingPGCard() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
+      child: Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 16,
+                    width: 200,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 12,
+                    width: 250,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: EdgeInsets.all(verticalSpacing * 2),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off_rounded, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
           Text(
-            'Finding perfect PGs for you...',
-            style: TextStyle(
-              color: AppTheme.deepCharcoal,
-              fontSize: 16,
+            'No PGs Found',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w600,
+              color: AppTheme.deepCharcoal,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
-            'This won\'t take long',
-            style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            'Try adjusting your filters or search criteria',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.gray600),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () {
+              context.read<HomeProvider>().resetFilters();
+              context.read<HomeProvider>().refresh();
+            },
+            icon: const Icon(Icons.refresh),
+            label: const Text('Reset Filters'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.emeraldGreen,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildErrorWidget(String error) {
-    return Container(
-      padding: EdgeInsets.all(horizontalPadding),
-      child: Center(
-        child: Column(
-          children: [
-            const SizedBox(height: 40),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(50),
-              ),
-              child: Icon(
-                Icons.error_outline_rounded,
-                size: 40,
-                color: Colors.red[400],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Oops! Something went wrong',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.deepCharcoal,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => context.read<HomeProvider>().refresh(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.emeraldGreen,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(buttonRadius),
-                ),
-              ),
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text(
-                'Try Again',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyWidget() {
-    return Container(
-      padding: EdgeInsets.all(horizontalPadding),
-      child: Center(
-        child: Column(
-          children: [
-            const SizedBox(height: 40),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.emeraldGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(50),
-              ),
-              child: Icon(
-                Icons.search_off_rounded,
-                size: 40,
-                color: AppTheme.emeraldGreen,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No PGs found nearby',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.deepCharcoal,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try adjusting your search or location filters',
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed:
-                  () =>
-                      context.read<HomeProvider>().requestLocationPermission(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.emeraldGreen,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(buttonRadius),
-                ),
-              ),
-              icon: const Icon(Icons.my_location_rounded),
-              label: const Text(
-                'Enable Location',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildFloatingActionButton() {
-    return AnimatedScale(
-      scale: _isRefreshing ? 0.8 : 1.0,
-      duration: const Duration(milliseconds: 200),
-      child: FloatingActionButton(
-        onPressed: _showFilters,
-        backgroundColor: AppTheme.emeraldGreen,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        child: const Icon(Icons.filter_list_rounded),
-      ),
+    return Consumer<HomeProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoading || !provider.hasLocationPermission) {
+          return const SizedBox.shrink();
+        }
+
+        return FloatingActionButton(
+          onPressed: () {
+            // Open map view
+            Navigator.pushNamed(context, AppConstants.mapViewRoute);
+          },
+          backgroundColor: AppTheme.emeraldGreen,
+          child: const Icon(Icons.map, color: Colors.white),
+        );
+      },
     );
   }
 
-  // Event handlers
-  Future<void> _handleRefresh() async {
-    if (_isRefreshing) return;
-
-    setState(() {
-      _isRefreshing = true;
-    });
-
-    try {
-      await context.read<HomeProvider>().refresh();
-      if (mounted) {
-        _showSuccessSnackBar('Data refreshed successfully');
-      }
-    } catch (e) {
-      if (mounted) {
-        _showErrorSnackBar('Failed to refresh data');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRefreshing = false;
-        });
-      }
-    }
-  }
-
-  void _handleSearch(String query) {
-    _searchDebouncer?.cancel();
-    _searchDebouncer = Timer(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        try {
-          if (query.isNotEmpty) {
-            context.read<HomeProvider>().searchPGs(query);
-          } else {
-            context.read<HomeProvider>().clearSearch();
-          }
-        } catch (e) {
-          debugPrint('Search error: $e');
-          _showErrorSnackBar('Search failed. Please try again.');
-        }
-      }
-    });
-  }
-
-  void _handleQuickAction(String action) {
-    // Implement quick action logic
-    _showInfoSnackBar('$action filter applied');
-  }
-
-  void _handleBannerTap(PromotionalBanner banner) {
-    // Implement banner action logic
-    _showInfoSnackBar('Opening ${banner.title}...');
-  }
-
-  void _navigateToPGDetail(String pgId) {
-    // Implement navigation to PG detail
-    _showInfoSnackBar('Opening PG details...');
-  }
-
-  void _navigateToAllFeatured() {
-    // Implement navigation to all featured PGs
-    _showInfoSnackBar('Showing all featured PGs...');
-  }
-
-  void _toggleWishlist(String pgId) {
-    // Implement wishlist toggle
-    context.read<HomeProvider>().toggleWishlist(pgId);
-  }
-
-  void _contactPG(PGProperty pg) {
-    // Implement contact functionality
-    _showInfoSnackBar('Calling ${pg.name}...');
-  }
-
-  void _showLocationPicker() {
+  void _showLocationBottomSheet() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => _buildLocationPicker(),
-    );
-  }
-
-  Widget _buildLocationPicker() {
-    return Container(
-      padding: EdgeInsets.all(horizontalPadding),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 8),
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Select Location',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.deepCharcoal,
-            ),
-          ),
-          const SizedBox(height: 20),
-          _buildLocationOption(
-            Icons.my_location_rounded,
-            'Use Current Location',
-            () {
-              Navigator.pop(context);
-              context.read<HomeProvider>().requestLocationPermission();
-            },
-          ),
-          const SizedBox(height: 12),
-          _buildLocationOption(Icons.search_rounded, 'Search Location', () {
-            Navigator.pop(context);
-            // TODO: Implement location search
-          }),
-          SizedBox(height: MediaQuery.of(context).padding.bottom + 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLocationOption(IconData icon, String title, VoidCallback onTap) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(buttonRadius),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[200]!),
-            borderRadius: BorderRadius.circular(buttonRadius),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.emeraldGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+      builder:
+          (context) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                child: Icon(icon, color: AppTheme.emeraldGreen, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                Text(
+                  'Select Location',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
                     color: AppTheme.deepCharcoal,
                   ),
                 ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 16,
-                color: Colors.grey[400],
-              ),
-            ],
+                const SizedBox(height: 24),
+                _buildActionButton(
+                  icon: Icons.my_location,
+                  title: 'Use Current Location',
+                  onTap: () {
+                    // Request location permission and get current location
+                    Navigator.pop(context);
+                    context.read<HomeProvider>().getCurrentLocation();
+                  },
+                ),
+                const SizedBox(height: 16),
+                _buildActionButton(
+                  icon: Icons.search,
+                  title: 'Search for Area',
+                  onTap: () {
+                    // Navigate to location search
+                    Navigator.pop(context);
+                    // Show search dialog
+                  },
+                ),
+                const SizedBox(height: 16),
+                _buildActionButton(
+                  icon: Icons.place,
+                  title: 'Select on Map',
+                  onTap: () {
+                    // Navigate to map selection
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, AppConstants.mapViewRoute);
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    double buttonRadius = 12,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(buttonRadius),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppTheme.gray300),
+          borderRadius: BorderRadius.circular(buttonRadius),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.emeraldGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: AppTheme.emeraldGreen, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.deepCharcoal,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: Colors.grey[400],
+            ),
+          ],
         ),
       ),
     );
@@ -1267,7 +1370,7 @@ class _HomeScreenState extends State<HomeScreen>
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(
+              const Expanded(
                 child: Text(
                   'Filters',
                   style: TextStyle(
@@ -1279,7 +1382,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               TextButton(
                 onPressed: () {},
-                child: Text(
+                child: const Text(
                   'Reset',
                   style: TextStyle(
                     color: AppTheme.emeraldGreen,
@@ -1290,6 +1393,8 @@ class _HomeScreenState extends State<HomeScreen>
             ],
           ),
           const SizedBox(height: 24),
+
+          // Coming soon placeholder - will be replaced with actual filters in production
           const Expanded(
             child: Center(
               child: Column(
@@ -1312,89 +1417,48 @@ class _HomeScreenState extends State<HomeScreen>
                   SizedBox(height: 8),
                   Text(
                     'Coming Soon!',
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                 ],
               ),
             ),
           ),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.emeraldGreen,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(buttonRadius),
-                ),
-              ),
-              child: const Text(
-                'Apply Filters',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-            ),
-          ),
-          SizedBox(height: MediaQuery.of(context).padding.bottom + 20),
         ],
       ),
     );
   }
+}
 
-  // Helper methods for showing messages
-  void _showErrorSnackBar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.white),
-              const SizedBox(width: 8),
-              Expanded(child: Text(message)),
-            ],
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          margin: EdgeInsets.all(horizontalPadding),
-        ),
-      );
-    }
+class _SliverSearchBarDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double minHeight;
+  final double maxHeight;
+
+  _SliverSearchBarDelegate({
+    required this.child,
+    this.minHeight = 60,
+    this.maxHeight = 60,
+  });
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return SizedBox.expand(child: child);
   }
 
-  void _showSuccessSnackBar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_outline, color: Colors.white),
-              const SizedBox(width: 8),
-              Expanded(child: Text(message)),
-            ],
-          ),
-          backgroundColor: AppTheme.emeraldGreen,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          margin: EdgeInsets.all(horizontalPadding),
-        ),
-      );
-    }
-  }
+  @override
+  double get minExtent => minHeight;
 
-  void _showInfoSnackBar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: AppTheme.emeraldGreen,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          margin: EdgeInsets.all(horizontalPadding),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
+  @override
+  double get maxExtent => maxHeight;
+
+  @override
+  bool shouldRebuild(_SliverSearchBarDelegate oldDelegate) {
+    return oldDelegate.minHeight != minHeight ||
+        oldDelegate.maxHeight != maxHeight ||
+        oldDelegate.child != child;
   }
 }

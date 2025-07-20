@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:nearby_pg/core/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
-// Import your screens
+// Import screens
 import '../../features/home/screens/home_screen.dart';
 import '../../features/search/screens/search_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
@@ -23,6 +24,9 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper>
   int _currentIndex = 0;
   late PageController _pageController;
   late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  bool _isExiting = false;
+  DateTime? _lastBackPressTime;
 
   // Bottom navigation items configuration
   final List<NavigationItem> _navigationItems = [
@@ -48,7 +52,7 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper>
       icon: Icons.person_rounded,
       activeIcon: Icons.person_rounded,
       label: 'Profile',
-      screen: ProfileScreen(),
+      screen: const ProfileScreen(),
     ),
   ];
 
@@ -56,10 +60,19 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper>
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _currentIndex);
+    _setupAnimations();
+  }
+
+  void _setupAnimations() {
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
     _animationController.forward();
   }
 
@@ -96,17 +109,64 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper>
     }
   }
 
+  // Handle back button press
+  Future<bool> _onWillPop() async {
+    if (_currentIndex != 0) {
+      // If not on home tab, go to home tab
+      setState(() {
+        _currentIndex = 0;
+      });
+      _pageController.animateToPage(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      return false;
+    }
+
+    // Double press to exit
+    final now = DateTime.now();
+    if (_lastBackPressTime == null ||
+        now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+      _lastBackPressTime = now;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Press back again to exit'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return false;
+    }
+
+    // Animate exit
+    setState(() {
+      _isExiting = true;
+    });
+    await _animationController.reverse();
+
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: _onPageChanged,
-        physics:
-            const NeverScrollableScrollPhysics(), // Disable swipe navigation
-        children: _navigationItems.map((item) => item.screen).toList(),
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        body: FadeTransition(
+          opacity: _fadeAnimation,
+          child: PageView(
+            controller: _pageController,
+            onPageChanged: _onPageChanged,
+            physics:
+                const NeverScrollableScrollPhysics(), // Disable swipe navigation
+            children: _navigationItems.map((item) => item.screen).toList(),
+          ),
+        ),
+        bottomNavigationBar: _buildBottomNavigationBar(),
+        extendBody:
+            true, // Allow content to flow under the bottom navigation bar
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
@@ -116,86 +176,102 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
           ),
         ],
       ),
       child: SafeArea(
-        child: Container(
-          height: 70,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children:
-                _navigationItems.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final item = entry.value;
-                  final isSelected = _currentIndex == index;
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(_navigationItems.length, (index) {
+              final item = _navigationItems[index];
+              final isSelected = index == _currentIndex;
 
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => _onTabTapped(index),
-                      behavior: HitTestBehavior.opaque,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color:
-                              isSelected
-                                  ? AppTheme.emeraldGreen.withOpacity(0.1)
-                                  : Colors.transparent,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                color:
-                                    isSelected
-                                        ? AppTheme.emeraldGreen
-                                        : Colors.transparent,
-                              ),
-                              child: Icon(
-                                isSelected ? item.activeIcon : item.icon,
-                                color:
-                                    isSelected
-                                        ? Colors.white
-                                        : Colors.grey[600],
-                                size: 22,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            AnimatedDefaultTextStyle(
-                              duration: const Duration(milliseconds: 200),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight:
-                                    isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.w500,
-                                color:
-                                    isSelected
-                                        ? AppTheme.emeraldGreen
-                                        : Colors.grey[600],
-                              ),
-                              child: Text(
-                                item.label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+              return _buildNavItem(item, index, isSelected);
+            }),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(NavigationItem item, int index, bool isSelected) {
+    // Use different color for selected item based on theme
+    final selectedColor = AppTheme.emeraldGreen;
+    final unselectedColor = Colors.grey[600]!;
+
+    // Custom animated tab item
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _onTabTapped(index),
+        borderRadius: BorderRadius.circular(16),
+        splashColor: selectedColor.withOpacity(0.1),
+        highlightColor: selectedColor.withOpacity(0.05),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color:
+                isSelected
+                    ? selectedColor.withOpacity(0.1)
+                    : Colors.transparent,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon with badge for notifications (example for home tab)
+              index == 0 && Provider.of<AppProvider>(context).hasNotifications
+                  ? Stack(
+                    children: [
+                      Icon(
+                        isSelected ? item.activeIcon : item.icon,
+                        color: isSelected ? selectedColor : unselectedColor,
+                        size: 24,
+                      ),
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 8,
+                            minHeight: 8,
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                    ],
+                  )
+                  : Icon(
+                    isSelected ? item.activeIcon : item.icon,
+                    color: isSelected ? selectedColor : unselectedColor,
+                    size: 24,
+                  ),
+
+              // Label with animation
+              if (isSelected) ...[
+                const SizedBox(width: 8),
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: isSelected ? selectedColor : unselectedColor,
+                  ),
+                  child: Text(item.label),
+                ),
+              ],
+            ],
           ),
         ),
       ),
@@ -218,7 +294,7 @@ class NavigationItem {
   });
 }
 
-// Placeholder Offers Screen (since it wasn't provided)
+// Placeholder Offers Screen
 class OffersScreen extends StatelessWidget {
   const OffersScreen({super.key});
 
@@ -261,7 +337,7 @@ class OffersScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Great Offers Coming Soon!',
+                'Exciting Offers Coming Soon!',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: AppTheme.deepCharcoal,
@@ -273,45 +349,109 @@ class OffersScreen extends StatelessWidget {
                 'We\'re working on exciting deals and discounts for you. Stay tuned!',
                 style: Theme.of(
                   context,
-                ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
+                ).textTheme.bodyLarge?.copyWith(color: AppTheme.gray600),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text(
-                        'You\'ll be notified when offers are available!',
-                      ),
-                      backgroundColor: AppTheme.emeraldGreen,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.emeraldGreen,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                icon: const Icon(Icons.notifications_rounded, size: 18),
-                label: const Text(
-                  'Notify Me',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
+
+              // Placeholder offer card
+              _buildComingSoonOfferCard(
+                context,
+                title: 'First Booking Discount',
+                description: 'Get 10% off on your first booking',
+                color: Colors.orange,
+                icon: Icons.card_giftcard,
+              ),
+              const SizedBox(height: 16),
+              _buildComingSoonOfferCard(
+                context,
+                title: 'Refer & Earn',
+                description: 'Refer friends and earn rewards',
+                color: Colors.purple,
+                icon: Icons.people,
+              ),
+              const SizedBox(height: 16),
+              _buildComingSoonOfferCard(
+                context,
+                title: 'Premium Membership',
+                description: 'Exclusive benefits for premium members',
+                color: Colors.blue,
+                icon: Icons.star,
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildComingSoonOfferCard(
+    BuildContext context, {
+    required String title,
+    required String description,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(color: AppTheme.gray600, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Coming Soon',
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
