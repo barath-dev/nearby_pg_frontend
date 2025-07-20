@@ -1,3 +1,4 @@
+// lib/features/profile/providers/profile_provider.dart
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
@@ -14,7 +15,6 @@ class ProfileProvider extends ChangeNotifier {
   // Services
   final ApiService _apiService = ApiService();
   final CacheService _cacheService = CacheService();
-  final ImagePicker _imagePicker = ImagePicker();
 
   // State variables
   bool _isLoading = false;
@@ -29,7 +29,7 @@ class ProfileProvider extends ChangeNotifier {
   List<PGProperty> _wishlistPGs = [];
 
   // Profile statistics
-  ProfileStats _profileStats = ProfileStats();
+  ProfileStats _profileStats = const ProfileStats();
 
   // Settings
   AppSettings _appSettings = const AppSettings();
@@ -56,7 +56,7 @@ class ProfileProvider extends ChangeNotifier {
 
   bool get isAuthenticated => _apiService.isAuthenticated;
   bool get hasProfile => _userProfile != null;
-  bool get isProfileComplete => _userProfile?.isProfileComplete ?? false;
+  bool get isProfileComplete => _userProfile != null;
 
   /// Initialize profile data
   Future<void> initialize() async {
@@ -89,36 +89,167 @@ class ProfileProvider extends ChangeNotifier {
   /// Load cached profile data
   Future<void> _loadCachedData() async {
     try {
-      final cachedProfile = await _cacheService.getCachedUserProfile();
-      if (cachedProfile != null) {
-        _userProfile = cachedProfile;
-        notifyListeners();
-      }
+      // Since this is a minimal implementation, we'll use mock data
+      _loadMockProfile();
+      _loadMockBookings();
+      _loadMockWishlist();
 
-      final cachedBookings = await _cacheService.getCachedBookings();
-      if (cachedBookings.isNotEmpty) {
-        _userBookings = cachedBookings;
-        notifyListeners();
-      }
-
-      final cachedWishlist = await _cacheService.getCachedWishlist();
-      if (cachedWishlist.isNotEmpty) {
-        _wishlistPGIds = cachedWishlist;
-        notifyListeners();
-      }
+      notifyListeners();
     } catch (e) {
       debugPrint('Error loading cached data: $e');
     }
   }
 
+  /// Load mock profile data for demo
+  void _loadMockProfile() {
+    _userProfile = UserProfile(
+      userId: 'user123',
+      name: 'John Doe',
+      email: 'john.doe@example.com',
+      phone: '9876543210',
+      profilePicture: 'https://i.pravatar.cc/300',
+      occupationType: 'PROFESSIONAL',
+      currentLocation: 'Delhi',
+      preferredLocation: 'Noida',
+      budgetMin: 8000,
+      budgetMax: 15000,
+      preferredAmenities: ['WIFI', 'AC', 'MEALS'],
+      genderPreference: 'ANY',
+      prefersMeals: true,
+      preferredRoomTypes: ['SINGLE', 'DOUBLE'],
+      isVerified: true,
+      createdAt: DateTime.now().subtract(const Duration(days: 60)),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  /// Load mock bookings for demo
+  void _loadMockBookings() {
+    _userBookings = [
+      Booking(
+        bookingId: 'booking123',
+        pgPropertyId: 'pg123',
+        userId: 'user123',
+        roomType: 'SINGLE',
+        checkInDate: DateTime.now().subtract(const Duration(days: 30)),
+        monthlyRent: 12000,
+        securityDeposit: 12000,
+        additionalFees: 1000,
+        totalAmount: 25000,
+        status: 'CONFIRMED',
+        createdAt: DateTime.now().subtract(const Duration(days: 35)),
+        updatedAt: DateTime.now().subtract(const Duration(days: 35)),
+        pgName: 'Green Valley PG',
+        pgAddress: 'Sector 18, Noida',
+        pgImage:
+            'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400',
+      ),
+      Booking(
+        bookingId: 'booking456',
+        pgPropertyId: 'pg456',
+        userId: 'user123',
+        roomType: 'DOUBLE',
+        checkInDate: DateTime.now().subtract(const Duration(days: 90)),
+        checkOutDate: DateTime.now().subtract(const Duration(days: 30)),
+        monthlyRent: 10000,
+        securityDeposit: 10000,
+        additionalFees: 500,
+        totalAmount: 20500,
+        status: 'CHECKED_OUT',
+        createdAt: DateTime.now().subtract(const Duration(days: 95)),
+        updatedAt: DateTime.now().subtract(const Duration(days: 30)),
+        pgName: 'Comfort PG',
+        pgAddress: 'Sector 62, Noida',
+        pgImage:
+            'https://images.unsplash.com/photo-1555854877-bab0e655b6f0?w=400',
+      ),
+    ];
+  }
+
+  /// Load mock wishlist for demo
+  void _loadMockWishlist() {
+    _wishlistPGIds = ['pg123', 'pg456', 'pg789'];
+
+    _wishlistPGs = [
+      PGProperty(
+        id: 'pg123',
+        name: 'Green Valley PG',
+        address: 'Sector 18, Noida',
+        latitude: 28.5706,
+        longitude: 77.3261,
+        price: 12000,
+        securityDeposit: 12000,
+        distanceFromCenter: 2.5,
+        rating: 4.5,
+        reviewCount: 42,
+        amenities: ['WIFI', 'AC', 'MEALS', 'PARKING'],
+        images: [
+          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400'
+        ],
+        genderPreference: 'ANY',
+        mealsIncluded: true,
+        roomTypes: ['SINGLE', 'DOUBLE'],
+        occupationType: 'ANY',
+        ownerName: 'Mr. Sharma',
+        contactPhone: '9876543210',
+        checkInTime: '12:00 PM',
+        checkOutTime: '11:00 AM',
+        description: 'A comfortable PG with all amenities',
+        houseRules: ['No smoking', 'No loud music after 10 PM'],
+        nearbyLandmarks: ['Metro Station - 500m'],
+        isVerified: true,
+        isFeatured: true,
+        isActive: true,
+        createdAt: DateTime.now().subtract(const Duration(days: 60)),
+        updatedAt: DateTime.now(),
+      ),
+      PGProperty(
+        id: 'pg456',
+        name: 'Comfort PG',
+        address: 'Sector 62, Noida',
+        latitude: 28.6280,
+        longitude: 77.3649,
+        price: 10000,
+        securityDeposit: 10000,
+        distanceFromCenter: 3.2,
+        rating: 4.0,
+        reviewCount: 28,
+        amenities: ['WIFI', 'AC', 'PARKING'],
+        images: [
+          'https://images.unsplash.com/photo-1555854877-bab0e655b6f0?w=400'
+        ],
+        genderPreference: 'MALE',
+        mealsIncluded: false,
+        roomTypes: ['DOUBLE', 'TRIPLE'],
+        occupationType: 'STUDENT',
+        ownerName: 'Mr. Kumar',
+        contactPhone: '9876543211',
+        checkInTime: '10:00 AM',
+        checkOutTime: '9:00 AM',
+        description: 'Budget-friendly PG for students',
+        houseRules: ['No guests after 9 PM'],
+        nearbyLandmarks: ['College - 1km'],
+        isVerified: true,
+        isFeatured: false,
+        isActive: true,
+        createdAt: DateTime.now().subtract(const Duration(days: 90)),
+        updatedAt: DateTime.now(),
+      ),
+    ];
+  }
+
   /// Load user profile from API
   Future<void> _loadUserProfile() async {
     try {
-      final response = await _apiService.get(AppConstants.userProfileEndpoint);
-      _userProfile = UserProfile.fromJson(response['data']);
+      // In a real app, this would be an API call
+      // For now, just use the mock data already loaded
+      // The API call would look like:
+      // final response = await _apiService.get(AppConstants.userProfileEndpoint);
+      // _userProfile = UserProfile.fromJson(response['data']);
 
-      // Cache the profile
-      await _cacheService.cacheUserProfile(_userProfile!);
+      // Simulate API delay
+      await Future.delayed(const Duration(milliseconds: 500));
+
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading user profile: $e');
@@ -129,16 +260,12 @@ class ProfileProvider extends ChangeNotifier {
   /// Load user bookings
   Future<void> _loadUserBookings() async {
     try {
-      final response = await _apiService.get(
-        AppConstants.bookingHistoryEndpoint,
-      );
-      _userBookings =
-          (response['data'] as List)
-              .map((json) => Booking.fromJson(json))
-              .toList();
+      // In a real app, this would be an API call
+      // For now, just use the mock data already loaded
 
-      // Cache bookings
-      await _cacheService.cacheBookings(_userBookings);
+      // Simulate API delay
+      await Future.delayed(const Duration(milliseconds: 700));
+
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading bookings: $e');
@@ -148,80 +275,30 @@ class ProfileProvider extends ChangeNotifier {
   /// Load wishlist
   Future<void> _loadWishlist() async {
     try {
-      final response = await _apiService.get(AppConstants.wishlistEndpoint);
-      _wishlistPGIds = List<String>.from(response['data']['pgIds'] ?? []);
+      // In a real app, this would be an API call
+      // For now, just use the mock data already loaded
 
-      // Load wishlist PG details
-      if (_wishlistPGIds.isNotEmpty) {
-        await _loadWishlistPGDetails();
-      }
+      // Simulate API delay
+      await Future.delayed(const Duration(milliseconds: 600));
 
-      // Cache wishlist
-      await _cacheService.cacheWishlist(_wishlistPGIds);
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading wishlist: $e');
     }
   }
 
-  /// Load wishlist PG details
-  Future<void> _loadWishlistPGDetails() async {
-    try {
-      final pgDetails = <PGProperty>[];
-
-      for (final pgId in _wishlistPGIds) {
-        // Try cache first
-        var pg = await _cacheService.getCachedPG(pgId);
-
-        if (pg == null) {
-          // Fetch from API
-          final response = await _apiService.get(
-            '${AppConstants.pgDetailEndpoint}/$pgId',
-          );
-          pg = PGProperty.fromJson(response['data']);
-
-          // Cache the PG
-          await _cacheService.cachePG(pg);
-        }
-
-        pgDetails.add(pg);
-      }
-
-      _wishlistPGs = pgDetails;
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error loading wishlist PG details: $e');
-    }
-  }
-
   /// Load app settings
   Future<void> _loadAppSettings() async {
     try {
-      // Load from cache/preferences
-      final themeMode =
-          await _cacheService.getUserPreference<String>('theme_mode') ??
-          'system';
-      final notifications =
-          await _cacheService.getUserPreference<bool>(
-            'notifications_enabled',
-          ) ??
-          true;
-      final locationTracking =
-          await _cacheService.getUserPreference<bool>('location_tracking') ??
-          true;
-      final emailNotifications =
-          await _cacheService.getUserPreference<bool>('email_notifications') ??
-          true;
-      final smsNotifications =
-          await _cacheService.getUserPreference<bool>('sms_notifications') ??
-          false;
+      // Simulate loading from preferences
+      await Future.delayed(const Duration(milliseconds: 300));
 
-      _appSettings = AppSettings(
-        themeMode: themeMode,
-        notificationsEnabled: notifications,
-        locationTrackingEnabled: locationTracking,
-        emailNotificationsEnabled: emailNotifications,
-        smsNotificationsEnabled: smsNotifications,
+      _appSettings = const AppSettings(
+        themeMode: 'system',
+        notificationsEnabled: true,
+        locationTrackingEnabled: true,
+        emailNotificationsEnabled: true,
+        smsNotificationsEnabled: false,
       );
 
       notifyListeners();
@@ -230,77 +307,62 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
-  /// Update user profile
-  Future<bool> updateProfile(UserProfile updatedProfile) async {
-    _setUpdating(true);
-    _clearError();
+  /// Upload profile image
+  Future<bool> uploadProfileImage(File image) async {
+    _selectedProfileImage = image;
+    _isUploadingImage = true;
+    notifyListeners();
 
     try {
-      final response = await _apiService.put(
-        AppConstants.updateProfileEndpoint,
-        data: updatedProfile.toJson(),
-      );
+      // Simulate API upload delay
+      await Future.delayed(const Duration(seconds: 2));
 
-      _userProfile = UserProfile.fromJson(response['data']);
-
-      // Update cache
-      await _cacheService.cacheUserProfile(_userProfile!);
-
-      // Recalculate stats
-      _calculateProfileStats();
-
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _setError('Failed to update profile: ${e.toString()}');
-      return false;
-    } finally {
-      _setUpdating(false);
-    }
-  }
-
-  /// Upload profile picture
-  Future<bool> uploadProfilePicture(ImageSource source) async {
-    try {
-      final pickedFile = await _imagePicker.pickImage(
-        source: source,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 85,
-      );
-
-      if (pickedFile == null) return false;
-
-      _selectedProfileImage = File(pickedFile.path);
-      _isUploadingImage = true;
-      notifyListeners();
-
-      // Upload to server
-      final response = await _apiService.uploadFile(
-        '/user/upload-avatar',
-        pickedFile.path,
-        fieldName: 'avatar',
-      );
-
-      // Update profile with new image URL
+      // In a real app, this would upload the image to a server
+      // For demo, we'll just update the profile with a mock URL
       if (_userProfile != null) {
-        final updatedProfile = _userProfile!.copyWith(
-          profilePicture: response['data']['imageUrl'],
+        _userProfile = _userProfile!.copyWith(
+          profilePicture:
+              'https://i.pravatar.cc/300?u=${DateTime.now().millisecondsSinceEpoch}',
         );
-
-        _userProfile = updatedProfile;
-        await _cacheService.cacheUserProfile(_userProfile!);
-        notifyListeners();
       }
+
+      _selectedProfileImage = null;
+      _isUploadingImage = false;
+      notifyListeners();
 
       return true;
     } catch (e) {
       _setError('Failed to upload image: ${e.toString()}');
-      return false;
-    } finally {
       _selectedProfileImage = null;
       _isUploadingImage = false;
       notifyListeners();
+      return false;
+    }
+  }
+
+  /// Remove profile image
+  Future<bool> removeProfileImage() async {
+    _isUploadingImage = true;
+    notifyListeners();
+
+    try {
+      // Simulate API delay
+      await Future.delayed(const Duration(seconds: 1));
+
+      // Remove profile picture
+      if (_userProfile != null) {
+        _userProfile = _userProfile!.copyWith(profilePicture: null);
+      }
+
+      _isUploadingImage = false;
+      notifyListeners();
+
+      return true;
+    } catch (e) {
+      _setError('Failed to remove image: ${e.toString()}');
+      _isUploadingImage = false;
+      notifyListeners();
+      return false;
     }
   }
 
@@ -311,28 +373,19 @@ class ProfileProvider extends ChangeNotifier {
 
       if (isCurrentlyWishlisted) {
         // Remove from wishlist
-        await _apiService.delete(
-          '${AppConstants.removeFromWishlistEndpoint}/$pgId',
-        );
         _wishlistPGIds.remove(pgId);
         _wishlistPGs.removeWhere((pg) => pg.id == pgId);
       } else {
         // Add to wishlist
-        await _apiService.post(
-          AppConstants.addToWishlistEndpoint,
-          data: {'pgId': pgId},
-        );
         _wishlistPGIds.add(pgId);
 
-        // Load PG details
-        final pg = await _cacheService.getCachedPG(pgId);
-        if (pg != null) {
-          _wishlistPGs.add(pg);
+        // In a real app, we would fetch PG details if not already cached
+        // For demo, we'll check if it's one of our mock PGs
+        final mockPG = _getMockPGById(pgId);
+        if (mockPG != null && !_wishlistPGs.any((pg) => pg.id == pgId)) {
+          _wishlistPGs.add(mockPG);
         }
       }
-
-      // Update cache
-      await _cacheService.cacheWishlist(_wishlistPGIds);
 
       // Recalculate stats
       _calculateProfileStats();
@@ -345,32 +398,117 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
+  /// Get mock PG by ID (helper method for demo)
+  PGProperty? _getMockPGById(String pgId) {
+    final mockPGs = [
+      PGProperty(
+        id: 'pg123',
+        name: 'Green Valley PG',
+        address: 'Sector 18, Noida',
+        latitude: 28.5706,
+        longitude: 77.3261,
+        price: 12000,
+        securityDeposit: 12000,
+        distanceFromCenter: 2.5,
+        rating: 4.5,
+        reviewCount: 42,
+        amenities: ['WIFI', 'AC', 'MEALS', 'PARKING'],
+        images: [
+          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400'
+        ],
+        genderPreference: 'ANY',
+        mealsIncluded: true,
+        roomTypes: ['SINGLE', 'DOUBLE'],
+        occupationType: 'ANY',
+        ownerName: 'Mr. Sharma',
+        contactPhone: '9876543210',
+        checkInTime: '12:00 PM',
+        checkOutTime: '11:00 AM',
+        description: 'A comfortable PG with all amenities',
+        houseRules: ['No smoking', 'No loud music after 10 PM'],
+        nearbyLandmarks: ['Metro Station - 500m'],
+        isVerified: true,
+        isFeatured: true,
+        isActive: true,
+        createdAt: DateTime.now().subtract(const Duration(days: 60)),
+        updatedAt: DateTime.now(),
+      ),
+      PGProperty(
+        id: 'pg456',
+        name: 'Comfort PG',
+        address: 'Sector 62, Noida',
+        latitude: 28.6280,
+        longitude: 77.3649,
+        price: 10000,
+        securityDeposit: 10000,
+        distanceFromCenter: 3.2,
+        rating: 4.0,
+        reviewCount: 28,
+        amenities: ['WIFI', 'AC', 'PARKING'],
+        images: [
+          'https://images.unsplash.com/photo-1555854877-bab0e655b6f0?w=400'
+        ],
+        genderPreference: 'MALE',
+        mealsIncluded: false,
+        roomTypes: ['DOUBLE', 'TRIPLE'],
+        occupationType: 'STUDENT',
+        ownerName: 'Mr. Kumar',
+        contactPhone: '9876543211',
+        checkInTime: '10:00 AM',
+        checkOutTime: '9:00 AM',
+        description: 'Budget-friendly PG for students',
+        houseRules: ['No guests after 9 PM'],
+        nearbyLandmarks: ['College - 1km'],
+        isVerified: true,
+        isFeatured: false,
+        isActive: true,
+        createdAt: DateTime.now().subtract(const Duration(days: 90)),
+        updatedAt: DateTime.now(),
+      ),
+      PGProperty(
+        id: 'pg789',
+        name: 'Luxury PG',
+        address: 'Sector 50, Noida',
+        latitude: 28.5735,
+        longitude: 77.3718,
+        price: 15000,
+        securityDeposit: 15000,
+        distanceFromCenter: 1.8,
+        rating: 4.8,
+        reviewCount: 56,
+        amenities: ['WIFI', 'AC', 'MEALS', 'PARKING', 'GYM', 'RECREATION_ROOM'],
+        images: [
+          'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400'
+        ],
+        genderPreference: 'FEMALE',
+        mealsIncluded: true,
+        roomTypes: ['SINGLE'],
+        occupationType: 'PROFESSIONAL',
+        ownerName: 'Mrs. Gupta',
+        contactPhone: '9876543212',
+        checkInTime: '12:00 PM',
+        checkOutTime: '11:00 AM',
+        description: 'Premium PG for working professionals',
+        houseRules: ['No smoking', 'No loud music after 10 PM'],
+        nearbyLandmarks: ['Metro Station - 200m', 'Mall - 500m'],
+        isVerified: true,
+        isFeatured: true,
+        isActive: true,
+        createdAt: DateTime.now().subtract(const Duration(days: 45)),
+        updatedAt: DateTime.now(),
+      ),
+    ];
+
+    return mockPGs.firstWhere((pg) => pg.id == pgId, orElse: () => mockPGs[0]);
+  }
+
   /// Update app settings
   Future<void> updateAppSettings(AppSettings newSettings) async {
     try {
       _appSettings = newSettings;
 
-      // Save to cache/preferences
-      await _cacheService.setUserPreference(
-        'theme_mode',
-        newSettings.themeMode,
-      );
-      await _cacheService.setUserPreference(
-        'notifications_enabled',
-        newSettings.notificationsEnabled,
-      );
-      await _cacheService.setUserPreference(
-        'location_tracking',
-        newSettings.locationTrackingEnabled,
-      );
-      await _cacheService.setUserPreference(
-        'email_notifications',
-        newSettings.emailNotificationsEnabled,
-      );
-      await _cacheService.setUserPreference(
-        'sms_notifications',
-        newSettings.smsNotificationsEnabled,
-      );
+      // In a real app, would save to cache/preferences
+      // await _cacheService.saveUserPreference('theme_mode', newSettings.themeMode);
 
       notifyListeners();
     } catch (e) {
@@ -378,42 +516,23 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
-  /// Delete user account
-  Future<bool> deleteAccount() async {
-    try {
-      await _apiService.delete('/user/account');
-
-      // Clear all user data
-      await logout();
-
-      return true;
-    } catch (e) {
-      _setError('Failed to delete account: ${e.toString()}');
-      return false;
-    }
-  }
-
   /// Logout user
   Future<void> logout() async {
     try {
-      // Call logout API
-      await _apiService.post(AppConstants.logoutEndpoint);
-    } catch (e) {
-      debugPrint('Logout API error: $e');
-    } finally {
-      // Clear local data regardless of API success
-      await _apiService.clearAuthToken();
-      await _cacheService.clearUserData();
+      // Simulate API call
+      await Future.delayed(const Duration(seconds: 1));
 
       // Reset state
       _userProfile = null;
-      _userBookings.clear();
-      _wishlistPGIds.clear();
-      _wishlistPGs.clear();
+      _userBookings = [];
+      _wishlistPGIds = [];
+      _wishlistPGs = [];
       _profileStats = ProfileStats();
       _selectedProfileImage = null;
 
       notifyListeners();
+    } catch (e) {
+      debugPrint('Error during logout: $e');
     }
   }
 
@@ -423,23 +542,17 @@ class ProfileProvider extends ChangeNotifier {
 
     final now = DateTime.now();
     final totalBookings = _userBookings.length;
-    final activeBookings = _userBookings.where((b) => b.isActive).length;
+    final activeBookings = _userBookings
+        .where((b) => b.status == 'CONFIRMED' || b.status == 'CHECKED_IN')
+        .length;
     final completedBookings =
-        _userBookings.where((b) => b.status == BookingStatus.checkedOut).length;
+        _userBookings.where((b) => b.status == 'CHECKED_OUT').length;
     final totalSpent = _userBookings.fold<double>(
       0,
       (sum, b) => sum + b.totalAmount,
     );
     final memberSince = _userProfile!.createdAt;
     final wishlistCount = _wishlistPGIds.length;
-
-    // Calculate loyalty tier
-    String loyaltyTier = 'Bronze';
-    if (totalBookings >= 10) {
-      loyaltyTier = 'Gold';
-    } else if (totalBookings >= 5) {
-      loyaltyTier = 'Silver';
-    }
 
     _profileStats = ProfileStats(
       totalBookings: totalBookings,
@@ -448,55 +561,10 @@ class ProfileProvider extends ChangeNotifier {
       totalSpent: totalSpent,
       memberSince: memberSince,
       wishlistCount: wishlistCount,
-      loyaltyTier: loyaltyTier,
-      profileCompletionPercentage: _calculateProfileCompletion(),
+      profileCompletionPercentage: 85, // Mock value
     );
 
     notifyListeners();
-  }
-
-  /// Calculate profile completion percentage
-  int _calculateProfileCompletion() {
-    if (_userProfile == null) return 0;
-
-    int completedFields = 0;
-    const totalFields = 10;
-
-    if (_userProfile!.name.isNotEmpty) completedFields++;
-    if (_userProfile!.email.isNotEmpty) completedFields++;
-    if (_userProfile!.phone.isNotEmpty) completedFields++;
-    if (_userProfile!.profilePicture?.isNotEmpty == true) completedFields++;
-    if (_userProfile!.dateOfBirth != null) completedFields++;
-    if (_userProfile!.gender?.isNotEmpty == true) completedFields++;
-    if (_userProfile!.currentLocation.isNotEmpty) completedFields++;
-    if (_userProfile!.preferredLocation.isNotEmpty) completedFields++;
-    if (_userProfile!.budgetMin > 0 && _userProfile!.budgetMax > 0) {
-      completedFields++;
-    }
-    if (_userProfile!.preferredAmenities.isNotEmpty) completedFields++;
-
-    return ((completedFields / totalFields) * 100).round();
-  }
-
-  /// Get user's active booking
-  Booking? get activeBooking {
-    try {
-      return _userBookings.firstWhere((booking) => booking.isActive);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Get recent bookings
-  List<Booking> get recentBookings {
-    final sorted = List<Booking>.from(_userBookings);
-    sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return sorted.take(3).toList();
-  }
-
-  /// Check if PG is in wishlist
-  bool isPGInWishlist(String pgId) {
-    return _wishlistPGIds.contains(pgId);
   }
 
   /// Refresh profile data
@@ -525,12 +593,6 @@ class ProfileProvider extends ChangeNotifier {
     _hasError = false;
     _errorMessage = '';
   }
-
-  @override
-  void dispose() {
-    // Clean up resources
-    super.dispose();
-  }
 }
 
 /// Profile statistics model
@@ -553,12 +615,11 @@ class ProfileStats {
     this.wishlistCount = 0,
     this.loyaltyTier = 'Bronze',
     this.profileCompletionPercentage = 0,
-  }) : memberSince = memberSince ?? _defaultDate;
+  }) : memberSince = memberSince ?? ProfileStats.defDate;
 
-  static final DateTime _defaultDate = DateTime.now();
+  static DateTime defDate = DateTime.now();
 
-  String get formattedTotalSpent =>
-      '${AppConstants.currency}${totalSpent.toInt()}';
+  String get formattedTotalSpent => '₹${totalSpent.toInt()}';
 
   String get memberSinceFormatted {
     final now = DateTime.now();
@@ -592,8 +653,6 @@ class AppSettings {
   final bool locationTrackingEnabled;
   final bool emailNotificationsEnabled;
   final bool smsNotificationsEnabled;
-  final String language;
-  final String currency;
 
   const AppSettings({
     this.themeMode = 'system',
@@ -601,8 +660,6 @@ class AppSettings {
     this.locationTrackingEnabled = true,
     this.emailNotificationsEnabled = true,
     this.smsNotificationsEnabled = false,
-    this.language = 'en',
-    this.currency = 'INR',
   });
 
   AppSettings copyWith({
@@ -611,8 +668,6 @@ class AppSettings {
     bool? locationTrackingEnabled,
     bool? emailNotificationsEnabled,
     bool? smsNotificationsEnabled,
-    String? language,
-    String? currency,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
@@ -623,8 +678,6 @@ class AppSettings {
           emailNotificationsEnabled ?? this.emailNotificationsEnabled,
       smsNotificationsEnabled:
           smsNotificationsEnabled ?? this.smsNotificationsEnabled,
-      language: language ?? this.language,
-      currency: currency ?? this.currency,
     );
   }
 }

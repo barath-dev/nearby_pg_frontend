@@ -1,3 +1,4 @@
+// lib/core/theme/app_theme.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -116,86 +117,22 @@ class AppTheme {
       // Chip theme
       chipTheme: _buildChipTheme(),
 
-      // Divider theme
-      dividerTheme: const DividerThemeData(
-        color: gray200,
-        thickness: 1,
-        space: 1,
-      ),
-
-      // Icon theme
-      iconTheme: const IconThemeData(color: gray600, size: 24),
-
-      // List tile theme
-      listTileTheme: ListTileThemeData(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        iconColor: gray600,
-        textColor: deepCharcoal,
-        titleTextStyle: GoogleFonts.roboto(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: deepCharcoal,
-        ),
-        subtitleTextStyle: GoogleFonts.roboto(
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-          color: gray600,
-        ),
-      ),
-
-      // Progress indicator theme
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: emeraldGreen,
-        linearTrackColor: gray200,
-        circularTrackColor: gray200,
-      ),
-
-      // Slider theme
-      sliderTheme: SliderThemeData(
-        activeTrackColor: emeraldGreen,
-        inactiveTrackColor: gray200,
-        thumbColor: emeraldGreen,
-        overlayColor: emeraldGreen.withOpacity(0.2),
-        valueIndicatorColor: emeraldGreen,
-        valueIndicatorTextStyle: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: white,
-        ),
-      ),
-
-      // Switch theme
-      switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return emeraldGreen;
-          }
-          return gray400;
-        }),
-        trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return emeraldGreen.withOpacity(0.5);
-          }
-          return gray300;
-        }),
-      ),
-
       // Checkbox theme
       checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
+        fillColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
             return emeraldGreen;
           }
           return Colors.transparent;
         }),
-        checkColor: WidgetStateProperty.all(white),
+        checkColor: MaterialStateProperty.all(white),
         side: const BorderSide(color: gray400, width: 2),
       ),
 
       // Radio theme
       radioTheme: RadioThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
+        fillColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
             return emeraldGreen;
           }
           return gray400;
@@ -228,7 +165,74 @@ class AppTheme {
 
       scaffoldBackgroundColor: gray900,
       textTheme: _buildTextTheme(white),
-      // ... other dark theme configurations
+
+      // App bar theme
+      appBarTheme: AppBarTheme(
+        backgroundColor: gray800,
+        foregroundColor: white,
+        elevation: 0,
+        scrolledUnderElevation: 2,
+        shadowColor: black.withOpacity(0.3),
+        titleTextStyle: GoogleFonts.poppins(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: white,
+        ),
+      ),
+
+      // Card theme
+      cardTheme: CardThemeData(
+        color: gray800,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+        ),
+      ),
+
+      // Bottom navigation theme
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: gray800,
+        selectedItemColor: lightMint,
+        unselectedItemColor: gray500,
+        selectedLabelStyle: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+        unselectedLabelStyle: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+      ),
+
+      // Input decoration theme
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: gray800,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusSm),
+          borderSide: const BorderSide(color: gray600),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusSm),
+          borderSide: const BorderSide(color: gray700),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusSm),
+          borderSide: const BorderSide(color: lightMint, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusSm),
+          borderSide: const BorderSide(color: error),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        hintStyle: GoogleFonts.roboto(fontSize: 16, color: gray500),
+        labelStyle: GoogleFonts.roboto(fontSize: 16, color: gray400),
+      ),
     );
   }
 
@@ -264,55 +268,35 @@ class AppTheme {
       ),
       headlineMedium: GoogleFonts.poppins(
         fontSize: 20,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w600,
         color: primaryColor,
         height: 1.3,
       ),
       headlineSmall: GoogleFonts.poppins(
         fontSize: 18,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w600,
         color: primaryColor,
-        height: 1.4,
+        height: 1.3,
       ),
 
       // Title styles (Poppins)
       titleLarge: GoogleFonts.poppins(
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: FontWeight.w600,
         color: primaryColor,
-        height: 1.4,
+        height: 1.3,
       ),
       titleMedium: GoogleFonts.poppins(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: primaryColor,
-        height: 1.4,
-      ),
-      titleSmall: GoogleFonts.poppins(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: primaryColor,
-        height: 1.4,
-      ),
-
-      // Label styles (Inter SemiBold)
-      labelLarge: GoogleFonts.inter(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: primaryColor,
-        height: 1.4,
+        height: 1.3,
       ),
-      labelMedium: GoogleFonts.inter(
+      titleSmall: GoogleFonts.poppins(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: primaryColor,
-        height: 1.4,
-      ),
-      labelSmall: GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: primaryColor,
-        height: 1.4,
+        height: 1.3,
       ),
 
       // Body styles (Roboto)
@@ -331,8 +315,28 @@ class AppTheme {
       bodySmall: GoogleFonts.roboto(
         fontSize: 12,
         fontWeight: FontWeight.w400,
-        color: primaryColor == white ? gray400 : gray600,
+        color: primaryColor,
         height: 1.5,
+      ),
+
+      // Label styles (Inter)
+      labelLarge: GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: primaryColor,
+        height: 1.4,
+      ),
+      labelMedium: GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: primaryColor,
+        height: 1.4,
+      ),
+      labelSmall: GoogleFonts.inter(
+        fontSize: 10,
+        fontWeight: FontWeight.w500,
+        color: primaryColor,
+        height: 1.4,
       ),
     );
   }
@@ -349,11 +353,11 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         textStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
       ).copyWith(
-        backgroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled)) {
+        backgroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.disabled)) {
             return gray300;
           }
-          if (states.contains(WidgetState.pressed)) {
+          if (states.contains(MaterialState.pressed)) {
             return emeraldGreen.withOpacity(0.8);
           }
           return emeraldGreen;
@@ -381,7 +385,8 @@ class AppTheme {
       style: TextButton.styleFrom(
         foregroundColor: emeraldGreen,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        textStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -392,43 +397,37 @@ class AppTheme {
       filled: true,
       fillColor: white,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: gray300, width: 1),
+        borderRadius: BorderRadius.circular(radiusSm),
+        borderSide: const BorderSide(color: gray300),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: gray300, width: 1),
+        borderRadius: BorderRadius.circular(radiusSm),
+        borderSide: const BorderSide(color: gray300),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(radiusSm),
         borderSide: const BorderSide(color: emeraldGreen, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: error, width: 1),
+        borderRadius: BorderRadius.circular(radiusSm),
+        borderSide: const BorderSide(color: error),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      hintStyle: GoogleFonts.roboto(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        color: gray500,
-      ),
-      labelStyle: GoogleFonts.roboto(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: gray600,
-      ),
+      hintStyle: GoogleFonts.roboto(fontSize: 16, color: gray500),
+      labelStyle: GoogleFonts.roboto(fontSize: 16, color: gray600),
+      errorStyle: GoogleFonts.roboto(fontSize: 12, color: error),
     );
   }
 
   /// Build card theme
   static CardThemeData _buildCardTheme() {
     return CardThemeData(
-      elevation: 2,
-      shadowColor: gray300.withOpacity(0.5),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       color: white,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusMd),
+      ),
+      shadowColor: gray500.withOpacity(0.2),
     );
   }
 
@@ -437,10 +436,10 @@ class AppTheme {
     return BottomNavigationBarThemeData(
       backgroundColor: white,
       selectedItemColor: emeraldGreen,
-      unselectedItemColor: gray500,
+      unselectedItemColor: gray600,
       selectedLabelStyle: GoogleFonts.inter(
         fontSize: 12,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w500,
       ),
       unselectedLabelStyle: GoogleFonts.inter(
         fontSize: 12,
@@ -455,21 +454,23 @@ class AppTheme {
   static ChipThemeData _buildChipTheme() {
     return ChipThemeData(
       backgroundColor: gray100,
-      selectedColor: lightMint,
-      secondarySelectedColor: lightMint,
-      disabledColor: gray200,
+      disabledColor: gray300,
+      selectedColor: emeraldGreen.withOpacity(0.1),
+      secondarySelectedColor: emeraldGreen.withOpacity(0.2),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       labelStyle: GoogleFonts.inter(
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: FontWeight.w500,
-        color: deepCharcoal,
+        color: gray700,
       ),
       secondaryLabelStyle: GoogleFonts.inter(
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: FontWeight.w500,
         color: emeraldGreen,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusPill),
+      ),
     );
   }
 }

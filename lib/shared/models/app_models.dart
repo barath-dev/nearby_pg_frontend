@@ -1,160 +1,62 @@
-import 'package:json_annotation/json_annotation.dart';
+// lib/shared/models/app_models.dart
 
-/// Enum for booking status
-enum BookingStatus {
-  @JsonValue('pending')
-  pending,
-  @JsonValue('confirmed')
-  confirmed,
-  @JsonValue('checked_in')
-  checkedIn,
-  @JsonValue('checked_out')
-  checkedOut,
-  @JsonValue('cancelled')
-  cancelled,
-  @JsonValue('refunded')
-  refunded,
-}
-
-/// Enum for gender preference
-enum GenderPreference {
-  @JsonValue('male')
-  male,
-  @JsonValue('female')
-  female,
-  @JsonValue('co_ed')
-  coEd,
-  @JsonValue('any')
-  any,
-}
-
-/// Enum for occupation type
-enum OccupationType {
-  @JsonValue('student')
-  student,
-  @JsonValue('working_professional')
-  workingProfessional,
-  @JsonValue('any')
-  any, other,
-}
-
-/// Enum for room type
-enum RoomType {
-  @JsonValue('single')
-  single,
-  @JsonValue('double')
-  double,
-  @JsonValue('triple')
-  triple,
-  @JsonValue('dormitory')
-  dormitory, other,
-}
-
-/// Enum for amenity types
-enum AmenityType {
-  @JsonValue('wifi')
-  wifi,
-  @JsonValue('ac')
-  ac,
-  @JsonValue('meals')
-  meals,
-  @JsonValue('laundry')
-  laundry,
-  @JsonValue('parking')
-  parking,
-  @JsonValue('gym')
-  gym,
-  @JsonValue('security')
-  security,
-  @JsonValue('housekeeping')
-  housekeeping,
-  @JsonValue('hot_water')
-  hotWater,
-  @JsonValue('power_backup')
-  powerBackup,
-  @JsonValue('cctv')
-  cctv,
-  @JsonValue('study_room')
-  studyRoom,
-  @JsonValue('recreation_room')
-  recreationRoom,
-  @JsonValue('other')
-  other,
-}
-
-/// PG Property model representing a paying guest accommodation
-@JsonSerializable()
+/// PG Property model
 class PGProperty {
-  /// Unique identifier for the PG property
+  /// Unique identifier
   final String id;
 
-  /// Name of the PG
+  /// PG name
   final String name;
 
-  /// Complete address of the PG
+  /// Full address
   final String address;
 
-  /// City where the PG is located
-  final String city;
-
-  /// State where the PG is located
-  final String state;
-
-  /// Postal code
-  final String pincode;
-
-  /// Latitude coordinate
+  /// Latitude
   final double latitude;
 
-  /// Longitude coordinate
+  /// Longitude
   final double longitude;
 
-  /// Monthly rent amount
-  final double monthlyRent;
+  /// Monthly rent
+  final double price;
 
-  /// Security deposit amount
+  /// Security deposit
   final double securityDeposit;
 
-  /// Maintenance fee (if applicable)
-  final double? maintenanceFee;
+  /// Distance from city center (in km)
+  final double distanceFromCenter;
 
-  /// Number of available rooms
-  final int availableRooms;
-
-  /// Total number of rooms
-  final int totalRooms;
-
-  /// Average rating (1-5 scale)
+  /// Rating (0-5)
   final double rating;
 
-  /// Total number of reviews
+  /// Number of reviews
   final int reviewCount;
 
-  /// List of available amenities
-  final List<AmenityType> amenities;
+  /// Available amenities
+  final List<String> amenities;
 
-  /// List of property images URLs
+  /// Property images
   final List<String> images;
 
-  /// Gender preference for residents
-  final GenderPreference genderPreference;
+  /// Gender preference (MALE, FEMALE, ANY)
+  final String genderPreference;
 
   /// Whether meals are included
   final bool mealsIncluded;
 
-  /// Meal price (if meals are optional)
+  /// Monthly meal price (if meals included)
   final double? mealPrice;
 
-  /// Room types available
-  final List<RoomType> roomTypes;
+  /// Available room types
+  final List<String> roomTypes;
 
-  /// Preferred occupation type
-  final OccupationType occupationType;
+  /// Occupation type (STUDENT, PROFESSIONAL, ANY)
+  final String occupationType;
 
-  /// Property owner/manager name
+  /// Owner name
   final String ownerName;
 
-  /// Contact phone number
+  /// Contact phone
   final String contactPhone;
 
   /// Contact email
@@ -166,7 +68,7 @@ class PGProperty {
   /// Check-out time
   final String checkOutTime;
 
-  /// Property description
+  /// Full description
   final String description;
 
   /// House rules
@@ -175,41 +77,42 @@ class PGProperty {
   /// Nearby landmarks
   final List<String> nearbyLandmarks;
 
-  /// Distance to nearest metro/railway station (in km)
-  final double? nearestStationDistance;
+  /// Distance to nearest metro/bus station (in km)
 
-  /// Whether the property is verified
+  /// Whether property is verified
   final bool isVerified;
 
-  /// Whether the property is featured
+  /// Whether property is featured
   final bool isFeatured;
 
-  /// Whether the property is currently active
+  /// Whether property is active
   final bool isActive;
 
-  /// Date when the property was created
+  /// Creation date
   final DateTime createdAt;
 
-  /// Date when the property was last updated
+  /// Last update date
   final DateTime updatedAt;
 
   /// Available from date
   final DateTime? availableFrom;
 
+  //available rooms
+  final int availableRooms;
+
+  //total rooms
+  final int totalRooms;
+
+  /// Constructor
   const PGProperty({
     required this.id,
     required this.name,
     required this.address,
-    required this.city,
-    required this.state,
-    required this.pincode,
     required this.latitude,
     required this.longitude,
-    required this.monthlyRent,
+    required this.price,
     required this.securityDeposit,
-    this.maintenanceFee,
-    required this.availableRooms,
-    required this.totalRooms,
+    required this.distanceFromCenter,
     required this.rating,
     required this.reviewCount,
     required this.amenities,
@@ -227,105 +130,95 @@ class PGProperty {
     required this.description,
     required this.houseRules,
     required this.nearbyLandmarks,
-    this.nearestStationDistance,
     required this.isVerified,
     required this.isFeatured,
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
+    this.availableRooms = 0,
+    this.totalRooms = 0,
     this.availableFrom,
   });
 
+  /// Create from JSON
   factory PGProperty.fromJson(Map<String, dynamic> json) {
     return PGProperty(
       id: json['id'] as String,
       name: json['name'] as String,
       address: json['address'] as String,
-      city: json['city'] as String,
-      state: json['state'] as String,
-      pincode: json['pincode'] as String,
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
-      monthlyRent: (json['monthlyRent'] as num).toDouble(),
-      securityDeposit: (json['securityDeposit'] as num).toDouble(),
-      maintenanceFee:
-          json['maintenanceFee'] != null
-              ? (json['maintenanceFee'] as num).toDouble()
-              : null,
-      availableRooms: json['availableRooms'] as int,
-      totalRooms: json['totalRooms'] as int,
-      rating: (json['rating'] as num).toDouble(),
-      reviewCount: json['reviewCount'] as int,
-      amenities:
-          (json['amenities'] as List<dynamic>)
-              .map(
-                (e) => AmenityType.values.firstWhere((a) => a.toString() == e),
-              )
-              .toList(),
-      images: List<String>.from(json['images'] as List),
-      genderPreference: GenderPreference.values.firstWhere(
-        (g) => g.toString() == json['genderPreference'],
-      ),
-      mealsIncluded: json['mealsIncluded'] as bool,
-      mealPrice:
-          json['mealPrice'] != null
-              ? (json['mealPrice'] as num).toDouble()
-              : null,
-      roomTypes:
-          (json['roomTypes'] as List<dynamic>)
-              .map((e) => RoomType.values.firstWhere((r) => r.toString() == e))
-              .toList(),
-      occupationType: OccupationType.values.firstWhere(
-        (o) => o.toString() == json['occupationType'],
-      ),
-      ownerName: json['ownerName'] as String,
-      contactPhone: json['contactPhone'] as String,
+      price: (json['price'] as num).toDouble(),
+      securityDeposit: (json['securityDeposit'] as num?)?.toDouble() ?? 0.0,
+      distanceFromCenter:
+          (json['distanceFromCenter'] as num?)?.toDouble() ?? 0.0,
+      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+      reviewCount: (json['reviewCount'] as num?)?.toInt() ?? 0,
+      amenities: (json['amenities'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      images: (json['images'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      genderPreference: json['genderPreference'] as String? ?? 'ANY',
+      mealsIncluded: json['mealsIncluded'] as bool? ?? false,
+      mealPrice: (json['mealPrice'] as num?)?.toDouble(),
+      roomTypes: (json['roomTypes'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      occupationType: json['occupationType'] as String? ?? 'ANY',
+      ownerName: json['ownerName'] as String? ?? 'Property Owner',
+      contactPhone: json['contactPhone'] as String? ?? '',
       contactEmail: json['contactEmail'] as String?,
-      checkInTime: json['checkInTime'] as String,
-      checkOutTime: json['checkOutTime'] as String,
-      description: json['description'] as String,
-      houseRules: List<String>.from(json['houseRules'] as List),
-      nearbyLandmarks: List<String>.from(json['nearbyLandmarks'] as List),
-      nearestStationDistance:
-          json['nearestStationDistance'] != null
-              ? (json['nearestStationDistance'] as num).toDouble()
-              : null,
-      isVerified: json['isVerified'] as bool,
-      isFeatured: json['isFeatured'] as bool,
-      isActive: json['isActive'] as bool,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      availableFrom:
-          json['availableFrom'] != null
-              ? DateTime.parse(json['availableFrom'] as String)
-              : null,
+      checkInTime: json['checkInTime'] as String? ?? '12:00 PM',
+      checkOutTime: json['checkOutTime'] as String? ?? '11:00 AM',
+      description: json['description'] as String? ?? '',
+      houseRules: (json['houseRules'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      nearbyLandmarks: (json['nearbyLandmarks'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      isVerified: json['isVerified'] as bool? ?? false,
+      isFeatured: json['isFeatured'] as bool? ?? false,
+      isActive: json['isActive'] as bool? ?? true,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : DateTime.now(),
+      availableFrom: json['availableFrom'] != null
+          ? DateTime.parse(json['availableFrom'] as String)
+          : null,
     );
   }
 
+  /// Convert to JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
       'address': address,
-      'city': city,
-      'state': state,
-      'pincode': pincode,
       'latitude': latitude,
       'longitude': longitude,
-      'monthlyRent': monthlyRent,
+      'price': price,
       'securityDeposit': securityDeposit,
-      'maintenanceFee': maintenanceFee,
-      'availableRooms': availableRooms,
-      'totalRooms': totalRooms,
+      'distanceFromCenter': distanceFromCenter,
       'rating': rating,
       'reviewCount': reviewCount,
-      'amenities': amenities.map((a) => a.toString()).toList(),
+      'amenities': amenities,
       'images': images,
-      'genderPreference': genderPreference.toString(),
+      'genderPreference': genderPreference,
       'mealsIncluded': mealsIncluded,
       'mealPrice': mealPrice,
-      'roomTypes': roomTypes.map((r) => r.toString()).toList(),
-      'occupationType': occupationType.toString(),
+      'roomTypes': roomTypes,
+      'occupationType': occupationType,
       'ownerName': ownerName,
       'contactPhone': contactPhone,
       'contactEmail': contactEmail,
@@ -334,7 +227,6 @@ class PGProperty {
       'description': description,
       'houseRules': houseRules,
       'nearbyLandmarks': nearbyLandmarks,
-      'nearestStationDistance': nearestStationDistance,
       'isVerified': isVerified,
       'isFeatured': isFeatured,
       'isActive': isActive,
@@ -344,55 +236,25 @@ class PGProperty {
     };
   }
 
-  /// Calculate total monthly cost including optional fees
-  double get totalMonthlyCost {
-    double total = monthlyRent;
-    if (maintenanceFee != null) total += maintenanceFee!;
-    if (mealsIncluded && mealPrice != null) total += mealPrice!;
-    return total;
-  }
-
-  /// Check if the property has specific amenity
-  bool hasAmenity(AmenityType amenity) => amenities.contains(amenity);
-
-  /// Get formatted rating string
-  String get formattedRating => rating.toStringAsFixed(1);
-
-  /// Check if property is available
-  bool get isAvailable => isActive && availableRooms > 0;
-
-  /// Get urgency message based on available rooms
-  String? get urgencyMessage {
-    if (availableRooms <= 0) return 'Fully Booked';
-    if (availableRooms <= 2) return 'Only $availableRooms rooms left!';
-    if (availableRooms <= 5) return '$availableRooms rooms available';
-    return null;
-  }
-
-  /// Copy with method for creating modified instances
+  /// Create a copy with modified fields
   PGProperty copyWith({
     String? id,
     String? name,
     String? address,
-    String? city,
-    String? state,
-    String? pincode,
     double? latitude,
     double? longitude,
-    double? monthlyRent,
+    double? price,
     double? securityDeposit,
-    double? maintenanceFee,
-    int? availableRooms,
-    int? totalRooms,
+    double? distanceFromCenter,
     double? rating,
     int? reviewCount,
-    List<AmenityType>? amenities,
+    List<String>? amenities,
     List<String>? images,
-    GenderPreference? genderPreference,
+    String? genderPreference,
     bool? mealsIncluded,
     double? mealPrice,
-    List<RoomType>? roomTypes,
-    OccupationType? occupationType,
+    List<String>? roomTypes,
+    String? occupationType,
     String? ownerName,
     String? contactPhone,
     String? contactEmail,
@@ -413,16 +275,11 @@ class PGProperty {
       id: id ?? this.id,
       name: name ?? this.name,
       address: address ?? this.address,
-      city: city ?? this.city,
-      state: state ?? this.state,
-      pincode: pincode ?? this.pincode,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
-      monthlyRent: monthlyRent ?? this.monthlyRent,
+      price: price ?? this.price,
       securityDeposit: securityDeposit ?? this.securityDeposit,
-      maintenanceFee: maintenanceFee ?? this.maintenanceFee,
-      availableRooms: availableRooms ?? this.availableRooms,
-      totalRooms: totalRooms ?? this.totalRooms,
+      distanceFromCenter: distanceFromCenter ?? this.distanceFromCenter,
       rating: rating ?? this.rating,
       reviewCount: reviewCount ?? this.reviewCount,
       amenities: amenities ?? this.amenities,
@@ -440,8 +297,6 @@ class PGProperty {
       description: description ?? this.description,
       houseRules: houseRules ?? this.houseRules,
       nearbyLandmarks: nearbyLandmarks ?? this.nearbyLandmarks,
-      nearestStationDistance:
-          nearestStationDistance ?? this.nearestStationDistance,
       isVerified: isVerified ?? this.isVerified,
       isFeatured: isFeatured ?? this.isFeatured,
       isActive: isActive ?? this.isActive,
@@ -453,7 +308,6 @@ class PGProperty {
 }
 
 /// User Profile model
-@JsonSerializable()
 class UserProfile {
   /// Unique user identifier
   final String userId;
@@ -477,7 +331,7 @@ class UserProfile {
   final String? gender;
 
   /// User's occupation type
-  final OccupationType occupationType;
+  final String occupationType;
 
   /// Current city/location
   final String currentLocation;
@@ -492,16 +346,16 @@ class UserProfile {
   final double budgetMax;
 
   /// Preferred amenities
-  final List<AmenityType> preferredAmenities;
+  final List<String> preferredAmenities;
 
   /// Preferred gender accommodation
-  final GenderPreference genderPreference;
+  final String genderPreference;
 
   /// Whether user prefers meals included
   final bool prefersMeals;
 
   /// Preferred room type
-  final List<RoomType> preferredRoomTypes;
+  final List<String> preferredRoomTypes;
 
   /// Emergency contact name
   final String? emergencyContactName;
@@ -512,15 +366,16 @@ class UserProfile {
   /// User's address
   final String? address;
 
-  /// Whether user profile is verified
+  /// Whether user is verified
   final bool isVerified;
 
-  /// User registration date
+  /// Creation date
   final DateTime createdAt;
 
-  /// Last profile update date
+  /// Last update date
   final DateTime updatedAt;
 
+  /// Constructor
   const UserProfile({
     required this.userId,
     required this.name,
@@ -546,6 +401,16 @@ class UserProfile {
     required this.updatedAt,
   });
 
+  /// Check if profile is complete
+  bool get isProfileComplete {
+    return name.isNotEmpty &&
+        email.isNotEmpty &&
+        phone.isNotEmpty &&
+        currentLocation.isNotEmpty &&
+        preferredLocation.isNotEmpty;
+  }
+
+  /// Create from JSON
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       userId: json['userId'] as String,
@@ -553,104 +418,67 @@ class UserProfile {
       email: json['email'] as String,
       phone: json['phone'] as String,
       profilePicture: json['profilePicture'] as String?,
-      dateOfBirth:
-          json['dateOfBirth'] != null
-              ? DateTime.parse(json['dateOfBirth'] as String)
-              : null,
+      dateOfBirth: json['dateOfBirth'] != null
+          ? DateTime.parse(json['dateOfBirth'] as String)
+          : null,
       gender: json['gender'] as String?,
-      occupationType: OccupationType.values.firstWhere(
-        (e) => e.toString() == 'OccupationType.${json['occupationType']}',
-        orElse: () => OccupationType.other,
-      ),
-      currentLocation: json['currentLocation'] as String,
-      preferredLocation: json['preferredLocation'] as String,
-      budgetMin: (json['budgetMin'] as num).toDouble(),
-      budgetMax: (json['budgetMax'] as num).toDouble(),
-      preferredAmenities:
-          (json['preferredAmenities'] as List<dynamic>)
-              .map(
-                (e) => AmenityType.values.firstWhere(
-                  (a) => a.toString() == 'AmenityType.$e',
-                  orElse: () => AmenityType.other,
-                ),
-              )
-              .toList(),
-      genderPreference: GenderPreference.values.firstWhere(
-        (e) => e.toString() == 'GenderPreference.${json['genderPreference']}',
-        orElse: () => GenderPreference.any,
-      ),
-      prefersMeals: json['prefersMeals'] as bool,
-      preferredRoomTypes:
-          (json['preferredRoomTypes'] as List<dynamic>)
-              .map(
-                (e) => RoomType.values.firstWhere(
-                  (r) => r.toString() == 'RoomType.$e',
-                  orElse: () => RoomType.other,
-                ),
-              )
-              .toList(),
+      occupationType: json['occupationType'] as String? ?? 'ANY',
+      currentLocation: json['currentLocation'] as String? ?? '',
+      preferredLocation: json['preferredLocation'] as String? ?? '',
+      budgetMin: (json['budgetMin'] as num?)?.toDouble() ?? 0.0,
+      budgetMax: (json['budgetMax'] as num?)?.toDouble() ?? 30000.0,
+      preferredAmenities: (json['preferredAmenities'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      genderPreference: json['genderPreference'] as String? ?? 'ANY',
+      prefersMeals: json['prefersMeals'] as bool? ?? false,
+      preferredRoomTypes: (json['preferredRoomTypes'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
       emergencyContactName: json['emergencyContactName'] as String?,
       emergencyContactPhone: json['emergencyContactPhone'] as String?,
       address: json['address'] as String?,
-      isVerified: json['isVerified'] as bool,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      isVerified: json['isVerified'] as bool? ?? false,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : DateTime.now(),
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'userId': userId,
-    'name': name,
-    'email': email,
-    'phone': phone,
-    'profilePicture': profilePicture,
-    'dateOfBirth': dateOfBirth?.toIso8601String(),
-    'gender': gender,
-    'occupationType': occupationType.toString().split('.').last,
-    'currentLocation': currentLocation,
-    'preferredLocation': preferredLocation,
-    'budgetMin': budgetMin,
-    'budgetMax': budgetMax,
-    'preferredAmenities':
-        preferredAmenities.map((e) => e.toString().split('.').last).toList(),
-    'genderPreference': genderPreference.toString().split('.').last,
-    'prefersMeals': prefersMeals,
-    'preferredRoomTypes':
-        preferredRoomTypes.map((e) => e.toString().split('.').last).toList(),
-    'emergencyContactName': emergencyContactName,
-    'emergencyContactPhone': emergencyContactPhone,
-    'address': address,
-    'isVerified': isVerified,
-    'createdAt': createdAt.toIso8601String(),
-    'updatedAt': updatedAt.toIso8601String(),
-  };
-
-  /// Get formatted budget range
-  String get formattedBudgetRange =>
-      '₹${budgetMin.toInt()} - ₹${budgetMax.toInt()}';
-
-  /// Check if profile is complete
-  bool get isProfileComplete {
-    return name.isNotEmpty &&
-        email.isNotEmpty &&
-        phone.isNotEmpty &&
-        preferredLocation.isNotEmpty &&
-        budgetMin > 0 &&
-        budgetMax > budgetMin;
+  /// Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'userId': userId,
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'profilePicture': profilePicture,
+      'dateOfBirth': dateOfBirth?.toIso8601String(),
+      'gender': gender,
+      'occupationType': occupationType,
+      'currentLocation': currentLocation,
+      'preferredLocation': preferredLocation,
+      'budgetMin': budgetMin,
+      'budgetMax': budgetMax,
+      'preferredAmenities': preferredAmenities,
+      'genderPreference': genderPreference,
+      'prefersMeals': prefersMeals,
+      'preferredRoomTypes': preferredRoomTypes,
+      'emergencyContactName': emergencyContactName,
+      'emergencyContactPhone': emergencyContactPhone,
+      'address': address,
+      'isVerified': isVerified,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
   }
 
-  /// Get age from date of birth
-  int? get age {
-    if (dateOfBirth == null) return null;
-    final now = DateTime.now();
-    int age = now.year - dateOfBirth!.year;
-    if (now.month < dateOfBirth!.month ||
-        (now.month == dateOfBirth!.month && now.day < dateOfBirth!.day)) {
-      age--;
-    }
-    return age;
-  }
-
+  /// Create a copy with modified fields
   UserProfile copyWith({
     String? userId,
     String? name,
@@ -659,15 +487,15 @@ class UserProfile {
     String? profilePicture,
     DateTime? dateOfBirth,
     String? gender,
-    OccupationType? occupationType,
+    String? occupationType,
     String? currentLocation,
     String? preferredLocation,
     double? budgetMin,
     double? budgetMax,
-    List<AmenityType>? preferredAmenities,
-    GenderPreference? genderPreference,
+    List<String>? preferredAmenities,
+    String? genderPreference,
     bool? prefersMeals,
-    List<RoomType>? preferredRoomTypes,
+    List<String>? preferredRoomTypes,
     String? emergencyContactName,
     String? emergencyContactPhone,
     String? address,
@@ -704,7 +532,6 @@ class UserProfile {
 }
 
 /// Booking model for PG reservations
-@JsonSerializable()
 class Booking {
   /// Unique booking identifier
   final String bookingId;
@@ -716,7 +543,7 @@ class Booking {
   final String userId;
 
   /// Room type booked
-  final RoomType roomType;
+  final String roomType;
 
   /// Check-in date
   final DateTime checkInDate;
@@ -737,7 +564,7 @@ class Booking {
   final double totalAmount;
 
   /// Booking status
-  final BookingStatus status;
+  final String status;
 
   /// Payment transaction ID
   final String? transactionId;
@@ -760,6 +587,7 @@ class Booking {
   /// Refund amount (if applicable)
   final double? refundAmount;
 
+  /// Constructor
   const Booking({
     required this.bookingId,
     required this.pgPropertyId,
@@ -781,15 +609,13 @@ class Booking {
     this.refundAmount,
   });
 
+  /// Create from JSON
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
       bookingId: json['bookingId'] as String,
       pgPropertyId: json['pgPropertyId'] as String,
       userId: json['userId'] as String,
-      roomType: RoomType.values.firstWhere(
-        (e) => e.toString() == 'RoomType.${json['roomType']}',
-        orElse: () => RoomType.single,
-      ),
+      roomType: json['roomType'] as String,
       checkInDate: DateTime.parse(json['checkInDate'] as String),
       checkOutDate: json['checkOutDate'] != null
           ? DateTime.parse(json['checkOutDate'] as String)
@@ -798,93 +624,54 @@ class Booking {
       securityDeposit: (json['securityDeposit'] as num).toDouble(),
       additionalFees: (json['additionalFees'] as num).toDouble(),
       totalAmount: (json['totalAmount'] as num).toDouble(),
-      status: BookingStatus.values.firstWhere(
-        (e) => e.toString() == 'BookingStatus.${json['status']}',
-        orElse: () => BookingStatus.pending,
-      ),
+      status: json['status'] as String,
       transactionId: json['transactionId'] as String?,
       specialRequests: json['specialRequests'] as String?,
       notes: json['notes'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       cancellationReason: json['cancellationReason'] as String?,
-      refundAmount: json['refundAmount'] != null
-          ? (json['refundAmount'] as num).toDouble()
-          : null,
+      refundAmount: (json['refundAmount'] as num?)?.toDouble(),
     );
   }
 
-  Map<String, dynamic> toJson() => {
-        'bookingId': bookingId,
-        'pgPropertyId': pgPropertyId,
-        'userId': userId,
-        'roomType': roomType.toString().split('.').last,
-        'checkInDate': checkInDate.toIso8601String(),
-        'checkOutDate': checkOutDate?.toIso8601String(),
-        'monthlyRent': monthlyRent,
-        'securityDeposit': securityDeposit,
-        'additionalFees': additionalFees,
-        'totalAmount': totalAmount,
-        'status': status.toString().split('.').last,
-        'transactionId': transactionId,
-        'specialRequests': specialRequests,
-        'notes': notes,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-        'cancellationReason': cancellationReason,
-        'refundAmount': refundAmount,
-      };
-
-  /// Check if booking is active
-  bool get isActive =>
-      status == BookingStatus.confirmed || status == BookingStatus.checkedIn;
-
-  /// Check if booking can be cancelled
-  bool get canBeCancelled =>
-      status == BookingStatus.pending || status == BookingStatus.confirmed;
-
-  /// Get formatted status
-  String get formattedStatus {
-    switch (status) {
-      case BookingStatus.pending:
-        return 'Pending Confirmation';
-      case BookingStatus.confirmed:
-        return 'Confirmed';
-      case BookingStatus.checkedIn:
-        return 'Checked In';
-      case BookingStatus.checkedOut:
-        return 'Checked Out';
-      case BookingStatus.cancelled:
-        return 'Cancelled';
-      case BookingStatus.refunded:
-        return 'Refunded';
-    }
+  /// Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'bookingId': bookingId,
+      'pgPropertyId': pgPropertyId,
+      'userId': userId,
+      'roomType': roomType,
+      'checkInDate': checkInDate.toIso8601String(),
+      'checkOutDate': checkOutDate?.toIso8601String(),
+      'monthlyRent': monthlyRent,
+      'securityDeposit': securityDeposit,
+      'additionalFees': additionalFees,
+      'totalAmount': totalAmount,
+      'status': status,
+      'transactionId': transactionId,
+      'specialRequests': specialRequests,
+      'notes': notes,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'cancellationReason': cancellationReason,
+      'refundAmount': refundAmount,
+    };
   }
 
-  /// Get days until check-in
-  int get daysUntilCheckIn {
-    final now = DateTime.now();
-    return checkInDate.difference(now).inDays;
-  }
-
-  /// Get duration of stay (if check-out date is set)
-  int? get stayDuration {
-    if (checkOutDate == null) return null;
-    return checkOutDate!.difference(checkInDate).inDays;
-  }
-
+  /// Create a copy with modified fields
   Booking copyWith({
     String? bookingId,
     String? pgPropertyId,
     String? userId,
-    RoomType? roomType,
+    String? roomType,
     DateTime? checkInDate,
     DateTime? checkOutDate,
     double? monthlyRent,
     double? securityDeposit,
     double? additionalFees,
     double? totalAmount,
-    BookingStatus? status,
+    String? status,
     String? transactionId,
     String? specialRequests,
     String? notes,
@@ -917,7 +704,6 @@ class Booking {
 }
 
 /// Search filter model
-@JsonSerializable()
 class SearchFilter {
   /// Location filter
   final String? location;
@@ -929,19 +715,19 @@ class SearchFilter {
   final double? maxBudget;
 
   /// Gender preference
-  final GenderPreference? genderPreference;
+  final String? genderPreference;
 
   /// Room type preferences
-  final List<RoomType>? roomTypes;
+  final List<String>? roomTypes;
 
   /// Required amenities
-  final List<AmenityType>? requiredAmenities;
+  final List<String>? requiredAmenities;
 
   /// Meal preference
   final bool? mealsIncluded;
 
   /// Occupation type
-  final OccupationType? occupationType;
+  final String? occupationType;
 
   /// Minimum rating
   final double? minRating;
@@ -955,6 +741,7 @@ class SearchFilter {
   /// Sort order (asc/desc)
   final String? sortOrder;
 
+  /// Constructor
   const SearchFilter({
     this.location,
     this.minBudget,
@@ -970,28 +757,21 @@ class SearchFilter {
     this.sortOrder,
   });
 
+  /// Create from JSON
   factory SearchFilter.fromJson(Map<String, dynamic> json) {
     return SearchFilter(
       location: json['location'] as String?,
       minBudget: (json['minBudget'] as num?)?.toDouble(),
       maxBudget: (json['maxBudget'] as num?)?.toDouble(),
-      genderPreference: json['genderPreference'] != null
-          ? GenderPreference.values.firstWhere(
-              (e) => e.toString() == 'GenderPreference.${json['genderPreference']}')
-          : null,
+      genderPreference: json['genderPreference'] as String?,
       roomTypes: (json['roomTypes'] as List<dynamic>?)
-          ?.map((e) => RoomType.values.firstWhere(
-              (rt) => rt.toString() == 'RoomType.$e'))
+          ?.map((e) => e as String)
           .toList(),
       requiredAmenities: (json['requiredAmenities'] as List<dynamic>?)
-          ?.map((e) => AmenityType.values.firstWhere(
-              (at) => at.toString() == 'AmenityType.$e'))
+          ?.map((e) => e as String)
           .toList(),
       mealsIncluded: json['mealsIncluded'] as bool?,
-      occupationType: json['occupationType'] != null
-          ? OccupationType.values.firstWhere(
-              (e) => e.toString() == 'OccupationType.${json['occupationType']}')
-          : null,
+      occupationType: json['occupationType'] as String?,
       minRating: (json['minRating'] as num?)?.toDouble(),
       maxDistance: (json['maxDistance'] as num?)?.toDouble(),
       sortBy: json['sortBy'] as String?,
@@ -999,51 +779,34 @@ class SearchFilter {
     );
   }
 
+  /// Convert to JSON
   Map<String, dynamic> toJson() {
     return {
       'location': location,
       'minBudget': minBudget,
       'maxBudget': maxBudget,
-      'genderPreference': genderPreference?.name,
-      'roomTypes': roomTypes?.map((e) => e.name).toList(),
-      'requiredAmenities': requiredAmenities?.map((e) => e.name).toList(),
+      'genderPreference': genderPreference,
+      'roomTypes': roomTypes,
+      'requiredAmenities': requiredAmenities,
       'mealsIncluded': mealsIncluded,
-      'occupationType': occupationType?.name,
+      'occupationType': occupationType,
       'minRating': minRating,
       'maxDistance': maxDistance,
       'sortBy': sortBy,
       'sortOrder': sortOrder,
-    };
+    }..removeWhere((key, value) => value == null);
   }
 
-  /// Check if any filter is applied
-  bool get hasFilters {
-    return location != null ||
-        minBudget != null ||
-        maxBudget != null ||
-        genderPreference != null ||
-        (roomTypes?.isNotEmpty ?? false) ||
-        (requiredAmenities?.isNotEmpty ?? false) ||
-        mealsIncluded != null ||
-        occupationType != null ||
-        minRating != null ||
-        maxDistance != null;
-  }
-
-  /// Clear all filters
-  SearchFilter clearAll() {
-    return const SearchFilter();
-  }
-
+  /// Create a copy with modified fields
   SearchFilter copyWith({
     String? location,
     double? minBudget,
     double? maxBudget,
-    GenderPreference? genderPreference,
-    List<RoomType>? roomTypes,
-    List<AmenityType>? requiredAmenities,
+    String? genderPreference,
+    List<String>? roomTypes,
+    List<String>? requiredAmenities,
     bool? mealsIncluded,
-    OccupationType? occupationType,
+    String? occupationType,
     double? minRating,
     double? maxDistance,
     String? sortBy,
@@ -1063,5 +826,175 @@ class SearchFilter {
       sortBy: sortBy ?? this.sortBy,
       sortOrder: sortOrder ?? this.sortOrder,
     );
+  }
+}
+
+/// Promotional Banner model
+class PromotionalBanner {
+  /// Unique banner ID
+  final String id;
+
+  /// Banner image URL
+  final String imageUrl;
+
+  /// Banner title
+  final String title;
+
+  /// Banner description
+  final String description;
+
+  /// Action URL or deep link
+  final String actionUrl;
+
+  /// Constructor
+  const PromotionalBanner({
+    required this.id,
+    required this.imageUrl,
+    required this.title,
+    required this.description,
+    required this.actionUrl,
+  });
+
+  /// Create from JSON
+  factory PromotionalBanner.fromJson(Map<String, dynamic> json) {
+    return PromotionalBanner(
+      id: json['id'] as String,
+      imageUrl: json['imageUrl'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String,
+      actionUrl: json['actionUrl'] as String,
+    );
+  }
+
+  /// Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'imageUrl': imageUrl,
+      'title': title,
+      'description': description,
+      'actionUrl': actionUrl,
+    };
+  }
+}
+
+/// App Settings model
+class AppSettings {
+  /// Theme mode (light, dark, system)
+  final String themeMode;
+
+  /// Whether notifications are enabled
+  final bool notificationsEnabled;
+
+  /// Whether location tracking is enabled
+  final bool locationTrackingEnabled;
+
+  /// Whether email notifications are enabled
+  final bool emailNotificationsEnabled;
+
+  /// Whether SMS notifications are enabled
+  final bool smsNotificationsEnabled;
+
+  /// App language (default: en)
+  final String language;
+
+  /// Constructor
+  const AppSettings({
+    this.themeMode = 'system',
+    this.notificationsEnabled = true,
+    this.locationTrackingEnabled = true,
+    this.emailNotificationsEnabled = true,
+    this.smsNotificationsEnabled = true,
+    this.language = 'en',
+  });
+
+  /// Create from JSON
+  factory AppSettings.fromJson(Map<String, dynamic> json) {
+    return AppSettings(
+      themeMode: json['themeMode'] as String? ?? 'system',
+      notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
+      locationTrackingEnabled: json['locationTrackingEnabled'] as bool? ?? true,
+      emailNotificationsEnabled:
+          json['emailNotificationsEnabled'] as bool? ?? true,
+      smsNotificationsEnabled: json['smsNotificationsEnabled'] as bool? ?? true,
+      language: json['language'] as String? ?? 'en',
+    );
+  }
+
+  /// Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'themeMode': themeMode,
+      'notificationsEnabled': notificationsEnabled,
+      'locationTrackingEnabled': locationTrackingEnabled,
+      'emailNotificationsEnabled': emailNotificationsEnabled,
+      'smsNotificationsEnabled': smsNotificationsEnabled,
+      'language': language,
+    };
+  }
+
+  /// Create a copy with modified fields
+  AppSettings copyWith({
+    String? themeMode,
+    bool? notificationsEnabled,
+    bool? locationTrackingEnabled,
+    bool? emailNotificationsEnabled,
+    bool? smsNotificationsEnabled,
+    String? language,
+  }) {
+    return AppSettings(
+      themeMode: themeMode ?? this.themeMode,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      locationTrackingEnabled:
+          locationTrackingEnabled ?? this.locationTrackingEnabled,
+      emailNotificationsEnabled:
+          emailNotificationsEnabled ?? this.emailNotificationsEnabled,
+      smsNotificationsEnabled:
+          smsNotificationsEnabled ?? this.smsNotificationsEnabled,
+      language: language ?? this.language,
+    );
+  }
+}
+
+/// Profile Statistics model
+class ProfileStats {
+  /// Number of bookings
+  final int bookingsCount;
+
+  /// Number of wishlist items
+  final int wishlistCount;
+
+  /// Number of reviews given
+  final int reviewsCount;
+
+  /// Profile completion percentage
+  final int profileCompletion;
+
+  /// Constructor
+  const ProfileStats({
+    this.bookingsCount = 0,
+    this.wishlistCount = 0,
+    this.reviewsCount = 0,
+    this.profileCompletion = 0,
+  });
+
+  /// Create from JSON
+  factory ProfileStats.fromJson(Map<String, dynamic> json) {
+    return ProfileStats(
+      bookingsCount: json['bookingsCount'] as int? ?? 0,
+      wishlistCount: json['wishlistCount'] as int? ?? 0,
+      reviewsCount: json['reviewsCount'] as int? ?? 0,
+      profileCompletion: json['profileCompletion'] as int? ?? 0,
+    );
+  }
+
+  /// Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'bookingsCount': bookingsCount,
+      'wishlistCount': wishlistCount,
+      'reviewsCount': reviewsCount,
+      'profileCompletion': profileCompletion,
+    };
   }
 }

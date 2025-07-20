@@ -1,3 +1,4 @@
+// lib/features/profile/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -37,7 +38,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       context.read<ProfileProvider>().initialize();
     });
   }
-  
+
   void _setupAnimations() {
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -127,9 +128,9 @@ class _ProfileScreenState extends State<ProfileScreen>
         title: Text(
           'Profile',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
         ),
         centerTitle: false,
         background: Container(
@@ -199,7 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             provider.selectedProfileImage!,
                             fit: BoxFit.cover,
                           )
-                        : profile.profilePicture?.isNotEmpty == true
+                        : profile.profilePicture != null
                             ? CachedNetworkImage(
                                 imageUrl: profile.profilePicture!,
                                 fit: BoxFit.cover,
@@ -218,7 +219,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                 ),
               ),
-              
+
               // Edit button
               if (!provider.isUploadingImage)
                 GestureDetector(
@@ -243,7 +244,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                   ),
                 ),
-              
+
               // Loading indicator
               if (provider.isUploadingImage)
                 Container(
@@ -272,20 +273,20 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Name
           Text(
             profile.name,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: AppTheme.deepCharcoal,
-            ),
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.deepCharcoal,
+                ),
           ),
-          
+
           const SizedBox(height: 4),
-          
+
           // Phone number
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -297,16 +298,16 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               const SizedBox(width: 4),
               Text(
-                '+91 ${profile.phoneNumber}',
+                '+91 ${profile.phone}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.gray600,
-                ),
+                      color: AppTheme.gray600,
+                    ),
               ),
             ],
           ),
-          
+
           // Email if available
-          if (profile.email != null && profile.email!.isNotEmpty) ...[
+          if (profile.email.isNotEmpty) ...[
             const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -318,17 +319,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  profile.email!,
+                  profile.email,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.gray600,
-                  ),
+                        color: AppTheme.gray600,
+                      ),
                 ),
               ],
             ),
           ],
-          
+
           const SizedBox(height: 16),
-          
+
           // Verified badge if applicable
           if (profile.isVerified)
             Container(
@@ -343,15 +344,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                   color: AppTheme.success.withOpacity(0.3),
                 ),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.verified_user,
                     color: AppTheme.success,
                     size: 14,
                   ),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 4),
                   Text(
                     'Verified User',
                     style: TextStyle(
@@ -371,7 +372,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   /// Build stats cards section
   Widget _buildStatsCards(ProfileProvider provider) {
     final stats = provider.profileStats;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -379,7 +380,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           _buildStatCard(
             icon: Icons.bookmark,
             title: 'Bookings',
-            value: stats.bookingsCount.toString(),
+            value: stats.totalBookings.toString(),
             color: Colors.orange,
             onTap: () {
               _tabController.animateTo(0);
@@ -397,7 +398,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           _buildStatCard(
             icon: Icons.star,
             title: 'Reviews',
-            value: stats.reviewsCount.toString(),
+            value: '0',
             color: Colors.amber,
             onTap: () {
               _tabController.animateTo(2);
@@ -458,7 +459,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(height: 4),
               Text(
                 title,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   color: AppTheme.gray600,
                 ),
@@ -490,7 +491,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         children: [
           // Tab Bar
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               border: Border(
                 bottom: BorderSide(color: AppTheme.gray200),
               ),
@@ -508,7 +509,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ],
             ),
           ),
-          
+
           // Tab Content
           Expanded(
             child: TabBarView(
@@ -528,11 +529,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   /// Build bookings tab content
   Widget _buildBookingsTab(ProfileProvider provider) {
     final bookings = provider.userBookings;
-    
+
     if (provider.isLoading) {
       return _buildLoadingList();
     }
-    
+
     if (bookings.isEmpty) {
       return _buildEmptyState(
         icon: Icons.bookmark_border,
@@ -544,7 +545,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         },
       );
     }
-    
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: bookings.length,
@@ -558,11 +559,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   /// Build wishlist tab content
   Widget _buildWishlistTab(ProfileProvider provider) {
     final wishlistPGs = provider.wishlistPGs;
-    
+
     if (provider.isLoading) {
       return _buildLoadingList();
     }
-    
+
     if (wishlistPGs.isEmpty) {
       return _buildEmptyState(
         icon: Icons.favorite_border,
@@ -574,7 +575,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         },
       );
     }
-    
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: wishlistPGs.length,
@@ -591,7 +592,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (provider.isLoading) {
       return _buildLoadingList();
     }
-    
+
     // Assume no reviews for demo
     return _buildEmptyState(
       icon: Icons.rate_review_outlined,
@@ -607,7 +608,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   /// Build booking card
   Widget _buildBookingCard(Booking booking) {
     final statusColor = _getStatusColor(booking.status);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -654,7 +655,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                 ),
               ),
-              
+
               // PG Info
               Expanded(
                 child: Padding(
@@ -663,7 +664,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        booking.pgName,
+                        booking.pgName ?? 'PG Accommodation',
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 16,
@@ -673,8 +674,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        booking.pgAddress,
-                        style: TextStyle(
+                        booking.pgAddress ?? 'Address not available',
+                        style: const TextStyle(
                           color: AppTheme.gray600,
                           fontSize: 12,
                         ),
@@ -703,13 +704,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                               ),
                             ),
                           ),
-                          
+
                           const Spacer(),
-                          
+
                           // Booking price
                           Text(
-                            '₹${booking.amount}',
-                            style: TextStyle(
+                            '₹${booking.totalAmount.toInt()}',
+                            style: const TextStyle(
                               color: AppTheme.emeraldGreen,
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
@@ -723,10 +724,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ],
           ),
-          
+
           // Divider
           const Divider(height: 1),
-          
+
           // Booking details
           Padding(
             padding: const EdgeInsets.all(12),
@@ -737,7 +738,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Check-in',
                         style: TextStyle(
                           color: AppTheme.gray600,
@@ -755,7 +756,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ],
                   ),
                 ),
-                
+
                 // View details button
                 TextButton(
                   onPressed: () {
@@ -822,7 +823,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                 ),
               ),
-              
+
               // Wishlist button
               Positioned(
                 top: 8,
@@ -837,7 +838,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.favorite,
                       color: Colors.red,
                       size: 20,
@@ -845,7 +846,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                 ),
               ),
-              
+
               // Gender badge
               Positioned(
                 top: 8,
@@ -856,7 +857,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getGenderColor(pg.genderPreference).withOpacity(0.8),
+                    color:
+                        _getGenderColor(pg.genderPreference).withOpacity(0.8),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -871,7 +873,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ],
           ),
-          
+
           // PG Info
           Padding(
             padding: const EdgeInsets.all(12),
@@ -892,11 +894,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    
+
                     // Price
                     Text(
-                      '₹${pg.price}/mo',
-                      style: TextStyle(
+                      '₹${pg.price.toInt()}/mo',
+                      style: const TextStyle(
                         color: AppTheme.emeraldGreen,
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
@@ -905,11 +907,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ],
                 ),
                 const SizedBox(height: 4),
-                
+
                 // Address
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.location_on,
                       size: 14,
                       color: AppTheme.gray600,
@@ -918,7 +920,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     Expanded(
                       child: Text(
                         pg.address,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppTheme.gray600,
                           fontSize: 12,
                         ),
@@ -929,7 +931,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ],
                 ),
                 const SizedBox(height: 8),
-                
+
                 // Rating and amenities
                 Row(
                   children: [
@@ -963,14 +965,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    
+
                     // Amenities
                     Expanded(
                       child: Row(
                         children: [
-                          _buildAmenityIcon(Icons.wifi, 'Wi-Fi'),
-                          _buildAmenityIcon(Icons.ac_unit, 'AC'),
-                          if (pg.amenities.contains(AmenityType.meals))
+                          if (pg.amenities.contains('WIFI'))
+                            _buildAmenityIcon(Icons.wifi, 'Wi-Fi'),
+                          if (pg.amenities.contains('AC'))
+                            _buildAmenityIcon(Icons.ac_unit, 'AC'),
+                          if (pg.amenities.contains('MEALS'))
                             _buildAmenityIcon(Icons.restaurant, 'Meals'),
                         ],
                       ),
@@ -978,7 +982,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ],
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Action buttons
                 Row(
                   children: [
@@ -995,7 +999,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppTheme.emeraldGreen,
-                          side: BorderSide(color: AppTheme.emeraldGreen),
+                          side: const BorderSide(color: AppTheme.emeraldGreen),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -1004,7 +1008,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    
+
                     // Book button
                     Expanded(
                       child: ElevatedButton(
@@ -1081,17 +1085,17 @@ class _ProfileScreenState extends State<ProfileScreen>
             Text(
               title,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppTheme.deepCharcoal,
-              ),
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.deepCharcoal,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.gray600,
-              ),
+                    color: AppTheme.gray600,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -1133,9 +1137,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               Container(
                 width: 100,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppTheme.gray200,
-                  borderRadius: const BorderRadius.only(
+                  borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(12),
                     bottomLeft: Radius.circular(12),
                   ),
@@ -1206,13 +1210,17 @@ class _ProfileScreenState extends State<ProfileScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.account_circle, size: 80, color: AppTheme.gray400),
+              const Icon(Icons.account_circle,
+                  size: 80, color: AppTheme.gray400),
               const SizedBox(height: 20),
               Text(
                 'Login Required',
                 style: Theme.of(
                   context,
-                ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
+                )
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               Text(
@@ -1263,9 +1271,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   /// Build avatar placeholder
   Widget _buildAvatarPlaceholder(String name) {
     final initials = name.isNotEmpty
-        ? name.split(' ').map((part) => part.isNotEmpty ? part[0] : '').join().toUpperCase()
+        ? name
+            .split(' ')
+            .map((part) => part.isNotEmpty ? part[0] : '')
+            .join()
+            .toUpperCase()
         : '?';
-    
+
     return Container(
       color: AppTheme.emeraldGreen,
       child: Center(
@@ -1307,9 +1319,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             Text(
               'Update Profile Picture',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppTheme.deepCharcoal,
-              ),
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.deepCharcoal,
+                  ),
             ),
             const SizedBox(height: 24),
             _buildImageOptionButton(
@@ -1431,12 +1443,12 @@ class _ProfileScreenState extends State<ProfileScreen>
             Text(
               'Settings',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppTheme.deepCharcoal,
-              ),
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.deepCharcoal,
+                  ),
             ),
             const SizedBox(height: 24),
-            
+
             // Settings options
             _buildSettingsItem(
               icon: Icons.person,
@@ -1483,9 +1495,9 @@ class _ProfileScreenState extends State<ProfileScreen>
               },
             ),
             const Divider(),
-            
+
             const Spacer(),
-            
+
             // Logout button
             SizedBox(
               width: double.infinity,
@@ -1537,7 +1549,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: AppTheme.gray400),
+            const Icon(Icons.arrow_forward_ios,
+                size: 16, color: AppTheme.gray400),
           ],
         ),
       ),
@@ -1556,49 +1569,53 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   /// Get status text
-  String _getStatusText(BookingStatus status) {
+  String _getStatusText(String status) {
     switch (status) {
-      case BookingStatus.pending:
+      case 'PENDING':
         return 'Pending';
-      case BookingStatus.confirmed:
+      case 'CONFIRMED':
         return 'Confirmed';
-      case BookingStatus.checkedIn:
+      case 'CHECKED_IN':
         return 'Checked In';
-      case BookingStatus.checkedOut:
+      case 'CHECKED_OUT':
         return 'Checked Out';
-      case BookingStatus.cancelled:
+      case 'CANCELLED':
         return 'Cancelled';
-      case BookingStatus.refunded:
+      case 'REFUNDED':
         return 'Refunded';
+      default:
+        return 'Unknown';
     }
   }
 
   /// Get status color
-  Color _getStatusColor(BookingStatus status) {
+  Color _getStatusColor(String status) {
     switch (status) {
-      case BookingStatus.pending:
+      case 'PENDING':
         return Colors.orange;
-      case BookingStatus.confirmed:
+      case 'CONFIRMED':
         return AppTheme.emeraldGreen;
-      case BookingStatus.checkedIn:
+      case 'CHECKED_IN':
         return Colors.blue;
-      case BookingStatus.checkedOut:
+      case 'CHECKED_OUT':
         return Colors.purple;
-      case BookingStatus.cancelled:
+      case 'CANCELLED':
         return Colors.red;
-      case BookingStatus.refunded:
+      case 'REFUNDED':
+        return Colors.grey;
+      default:
         return Colors.grey;
     }
   }
 
   /// Get gender text
-  String _getGenderText(GenderPreference gender) {
+  String _getGenderText(String gender) {
     switch (gender) {
-      case GenderPreference.male:
+      case 'MALE':
         return 'Male Only';
-      case GenderPreference.female:
+      case 'FEMALE':
         return 'Female Only';
-      case GenderPreference.any:
+      case 'ANY':
         return 'Any Gender';
       default:
         return 'Co-Ed';
@@ -1606,11 +1623,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   /// Get gender color
-  Color _getGenderColor(GenderPreference gender) {
+  Color _getGenderColor(String gender) {
     switch (gender) {
-      case GenderPreference.male:
+      case 'MALE':
         return Colors.blue;
-      case GenderPreference.female:
+      case 'FEMALE':
         return Colors.pink;
       default:
         return Colors.purple;

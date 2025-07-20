@@ -1,12 +1,11 @@
+// lib/features/pg/screens/pg_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:carousel_slider/carousel_slider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import '../../../shared/models/app_models.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/constants/app_constants.dart';
 
 class PGDetailScreen extends StatefulWidget {
   final String pgId;
@@ -18,8 +17,7 @@ class PGDetailScreen extends StatefulWidget {
 }
 
 class _PGDetailScreenState extends State<PGDetailScreen> {
-  final CarouselSliderController _carouselController =
-      CarouselSliderController();
+  final PageController _pageController = PageController();
   int _currentImageIndex = 0;
   bool _isWishlisted = false;
 
@@ -40,36 +38,32 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
       id: widget.pgId,
       name: 'Green Valley PG',
       address: 'Sector 18, Noida, Near City Center Mall',
-      city: 'Noida',
-      state: 'Uttar Pradesh',
-      pincode: '201301',
       latitude: 28.5706,
       longitude: 77.3261,
-      monthlyRent: 12000,
+      price: 12000,
       securityDeposit: 24000,
-      availableRooms: 3,
-      totalRooms: 20,
+      distanceFromCenter: 3.5,
       rating: 4.5,
       reviewCount: 128,
       amenities: [
-        AmenityType.wifi,
-        AmenityType.ac,
-        AmenityType.meals,
-        AmenityType.laundry,
-        AmenityType.parking,
-        AmenityType.security,
-        AmenityType.hotWater,
-        AmenityType.powerBackup,
+        'WIFI',
+        'AC',
+        'MEALS',
+        'LAUNDRY',
+        'PARKING',
+        'SECURITY',
+        'HOT_WATER',
+        'POWER_BACKUP'
       ],
       images: [
         'https://images.unsplash.com/photo-1555854877-bab0e655b6f0?w=400',
         'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400',
         'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400',
       ],
-      genderPreference: GenderPreference.any,
+      genderPreference: 'ANY',
       mealsIncluded: true,
-      roomTypes: [RoomType.single, RoomType.double],
-      occupationType: OccupationType.any,
+      roomTypes: ['SINGLE', 'DOUBLE'],
+      occupationType: 'ANY',
       ownerName: 'Mr. Sharma',
       contactPhone: '9876543210',
       checkInTime: '10:00 AM',
@@ -93,6 +87,8 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
       isActive: true,
       createdAt: DateTime.now().subtract(const Duration(days: 30)),
       updatedAt: DateTime.now(),
+      availableRooms: 3,
+      totalRooms: 20,
     );
 
     setState(() {});
@@ -218,46 +214,35 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
   Widget _buildImageCarousel() {
     return Stack(
       children: [
-        CarouselSlider(
-          carouselController: _carouselController,
-          options: CarouselOptions(
-            height: double.infinity,
-            viewportFraction: 1.0,
-            enableInfiniteScroll: true,
-            onPageChanged: (index, _) {
-              setState(() {
-                _currentImageIndex = index;
-              });
-            },
-          ),
-          items:
-              _pgProperty.images.map((imageUrl) {
-                return Builder(
-                  builder: (context) {
-                    return CachedNetworkImage(
-                      imageUrl: imageUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      placeholder:
-                          (context, url) => Container(
-                            color: Colors.grey[300],
-                            child: const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                          ),
-                      errorWidget:
-                          (context, url, error) => Container(
-                            color: Colors.grey[300],
-                            child: const Icon(
-                              Icons.image_not_supported,
-                              size: 50,
-                              color: Colors.grey,
-                            ),
-                          ),
-                    );
-                  },
-                );
-              }).toList(),
+        PageView.builder(
+          controller: _pageController,
+          onPageChanged: (index) {
+            setState(() {
+              _currentImageIndex = index;
+            });
+          },
+          itemCount: _pgProperty.images.length,
+          itemBuilder: (context, index) {
+            return CachedNetworkImage(
+              imageUrl: _pgProperty.images[index],
+              fit: BoxFit.cover,
+              width: double.infinity,
+              placeholder: (context, url) => Container(
+                color: Colors.grey[300],
+                child: const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              errorWidget: (context, url, error) => Container(
+                color: Colors.grey[300],
+                child: const Icon(
+                  Icons.image_not_supported,
+                  size: 50,
+                  color: Colors.grey,
+                ),
+              ),
+            );
+          },
         ),
 
         // Image counter indicator
@@ -335,9 +320,9 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
           Text(
             _pgProperty.name,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: AppTheme.deepCharcoal,
-            ),
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.deepCharcoal,
+                ),
           ),
 
           const SizedBox(height: 8),
@@ -365,9 +350,8 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
             children: [
               RatingBarIndicator(
                 rating: _pgProperty.rating,
-                itemBuilder:
-                    (context, _) =>
-                        const Icon(Icons.star_rounded, color: Colors.amber),
+                itemBuilder: (context, _) =>
+                    const Icon(Icons.star_rounded, color: Colors.amber),
                 itemCount: 5,
                 itemSize: 18,
                 unratedColor: Colors.grey[300],
@@ -376,9 +360,9 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
               Text(
                 '${_pgProperty.rating}',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.deepCharcoal,
-                ),
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.deepCharcoal,
+                    ),
               ),
               Text(
                 ' (${_pgProperty.reviewCount} reviews)',
@@ -421,9 +405,9 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
           Text(
             'Pricing',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppTheme.deepCharcoal,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.deepCharcoal,
+                ),
           ),
 
           const SizedBox(height: 16),
@@ -433,7 +417,7 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
               Expanded(
                 child: _buildPriceCard(
                   'Monthly Rent',
-                  '₹${_pgProperty.monthlyRent.toInt()}',
+                  '₹${_pgProperty.price.toInt()}',
                   Icons.calendar_month,
                 ),
               ),
@@ -471,16 +455,16 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
                         style: Theme.of(
                           context,
                         ).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.deepCharcoal,
-                        ),
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.deepCharcoal,
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${_pgProperty.availableRooms} out of ${_pgProperty.totalRooms} rooms available',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.deepCharcoal,
-                        ),
+                              color: AppTheme.deepCharcoal,
+                            ),
                       ),
                     ],
                   ),
@@ -504,13 +488,11 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
           Text(
             'Amenities',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppTheme.deepCharcoal,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.deepCharcoal,
+                ),
           ),
-
           const SizedBox(height: 16),
-
           Wrap(spacing: 16, runSpacing: 16, children: _buildAmenityWidgets()),
         ],
       ),
@@ -519,35 +501,35 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
 
   List<Widget> _buildAmenityWidgets() {
     final amenityIcons = {
-      AmenityType.wifi: Icons.wifi,
-      AmenityType.ac: Icons.ac_unit,
-      AmenityType.meals: Icons.restaurant,
-      AmenityType.laundry: Icons.local_laundry_service,
-      AmenityType.parking: Icons.local_parking,
-      AmenityType.gym: Icons.fitness_center,
-      AmenityType.security: Icons.security,
-      AmenityType.housekeeping: Icons.cleaning_services,
-      AmenityType.hotWater: Icons.water_drop,
-      AmenityType.powerBackup: Icons.power,
-      AmenityType.cctv: Icons.videocam,
-      AmenityType.studyRoom: Icons.book,
-      AmenityType.recreationRoom: Icons.sports_esports,
+      'WIFI': Icons.wifi,
+      'AC': Icons.ac_unit,
+      'MEALS': Icons.restaurant,
+      'LAUNDRY': Icons.local_laundry_service,
+      'PARKING': Icons.local_parking,
+      'GYM': Icons.fitness_center,
+      'SECURITY': Icons.security,
+      'HOUSEKEEPING': Icons.cleaning_services,
+      'HOT_WATER': Icons.water_drop,
+      'POWER_BACKUP': Icons.power,
+      'CCTV': Icons.videocam,
+      'STUDY_ROOM': Icons.book,
+      'RECREATION_ROOM': Icons.sports_esports,
     };
 
     final amenityNames = {
-      AmenityType.wifi: 'Wi-Fi',
-      AmenityType.ac: 'Air Conditioning',
-      AmenityType.meals: 'Meals Included',
-      AmenityType.laundry: 'Laundry',
-      AmenityType.parking: 'Parking',
-      AmenityType.gym: 'Gym',
-      AmenityType.security: '24/7 Security',
-      AmenityType.housekeeping: 'Housekeeping',
-      AmenityType.hotWater: 'Hot Water',
-      AmenityType.powerBackup: 'Power Backup',
-      AmenityType.cctv: 'CCTV',
-      AmenityType.studyRoom: 'Study Room',
-      AmenityType.recreationRoom: 'Recreation Room',
+      'WIFI': 'Wi-Fi',
+      'AC': 'Air Conditioning',
+      'MEALS': 'Meals Included',
+      'LAUNDRY': 'Laundry',
+      'PARKING': 'Parking',
+      'GYM': 'Gym',
+      'SECURITY': '24/7 Security',
+      'HOUSEKEEPING': 'Housekeeping',
+      'HOT_WATER': 'Hot Water',
+      'POWER_BACKUP': 'Power Backup',
+      'CCTV': 'CCTV',
+      'STUDY_ROOM': 'Study Room',
+      'RECREATION_ROOM': 'Recreation Room',
     };
 
     return _pgProperty.amenities.map((amenity) {
@@ -592,19 +574,17 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
           Text(
             'Description',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppTheme.deepCharcoal,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.deepCharcoal,
+                ),
           ),
-
           const SizedBox(height: 12),
-
           Text(
             _pgProperty.description,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.gray700,
-              height: 1.5,
-            ),
+                  color: AppTheme.gray700,
+                  height: 1.5,
+                ),
           ),
         ],
       ),
@@ -613,26 +593,26 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
 
   Widget _buildRoomTypesSection() {
     final roomTypeDetails = {
-      RoomType.single: {
+      'SINGLE': {
         'name': 'Single Room',
         'description': 'One single bed with study table and wardrobe.',
-        'price': _pgProperty.monthlyRent,
+        'price': _pgProperty.price,
       },
-      RoomType.double: {
+      'DOUBLE': {
         'name': 'Double Sharing',
         'description': 'Two single beds with study tables and wardrobes.',
-        'price': _pgProperty.monthlyRent * 0.7,
+        'price': _pgProperty.price * 0.7,
       },
-      RoomType.triple: {
+      'TRIPLE': {
         'name': 'Triple Sharing',
         'description':
             'Three single beds with shared study space and wardrobes.',
-        'price': _pgProperty.monthlyRent * 0.6,
+        'price': _pgProperty.price * 0.6,
       },
-      RoomType.dormitory: {
+      'DORMITORY': {
         'name': 'Dormitory',
         'description': 'Multiple beds in a large hall with shared facilities.',
-        'price': _pgProperty.monthlyRent * 0.4,
+        'price': _pgProperty.price * 0.4,
       },
     };
 
@@ -646,83 +626,81 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
           Text(
             'Room Types',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppTheme.deepCharcoal,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.deepCharcoal,
+                ),
           ),
-
           const SizedBox(height: 16),
-
           Column(
-            children:
-                _pgProperty.roomTypes.map((roomType) {
-                  final details =
-                      roomTypeDetails[roomType] ??
-                      {
-                        'name': 'Room',
-                        'description': 'Standard accommodation',
-                        'price': _pgProperty.monthlyRent,
-                      };
+            children: _pgProperty.roomTypes.map((roomType) {
+              final details = roomTypeDetails[roomType] ??
+                  {
+                    'name': 'Room',
+                    'description': 'Standard accommodation',
+                    'price': _pgProperty.price,
+                  };
 
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppTheme.gray200),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: AppTheme.emeraldGreen.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.hotel,
-                              color: AppTheme.emeraldGreen,
-                            ),
-                          ),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppTheme.gray200),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: AppTheme.emeraldGreen.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.hotel,
+                          color: AppTheme.emeraldGreen,
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                details['name'] as String,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.titleMedium?.copyWith(
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            details['name'] as String,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                   color: AppTheme.deepCharcoal,
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                details['description'] as String,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: AppTheme.gray600),
-                              ),
-                            ],
                           ),
-                        ),
-                        Text(
-                          '₹${(details['price'] as double).toInt()}',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleMedium?.copyWith(
+                          const SizedBox(height: 4),
+                          Text(
+                            details['description'] as String,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: AppTheme.gray600),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '₹${(details['price'] as double).toInt()}',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: AppTheme.emeraldGreen,
                           ),
-                        ),
-                      ],
                     ),
-                  );
-                }).toList(),
+                  ],
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -740,38 +718,37 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
           Text(
             'House Rules',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppTheme.deepCharcoal,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.deepCharcoal,
+                ),
           ),
-
           const SizedBox(height: 16),
-
           Column(
-            children:
-                _pgProperty.houseRules.map((rule) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.check_circle,
-                          size: 20,
-                          color: AppTheme.emeraldGreen,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            rule,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: AppTheme.gray700),
-                          ),
-                        ),
-                      ],
+            children: _pgProperty.houseRules.map((rule) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      size: 20,
+                      color: AppTheme.emeraldGreen,
                     ),
-                  );
-                }).toList(),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        rule,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(color: AppTheme.gray700),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -789,9 +766,9 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
           Text(
             'Location',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppTheme.deepCharcoal,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.deepCharcoal,
+                ),
           ),
 
           const SizedBox(height: 12),
@@ -825,37 +802,38 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
           Text(
             'Nearby Landmarks',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppTheme.deepCharcoal,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.deepCharcoal,
+                ),
           ),
 
           const SizedBox(height: 8),
 
           Column(
-            children:
-                _pgProperty.nearbyLandmarks.map((landmark) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.place,
-                          size: 16,
-                          color: AppTheme.gray600,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            landmark,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: AppTheme.gray700),
-                          ),
-                        ),
-                      ],
+            children: _pgProperty.nearbyLandmarks.map((landmark) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.place,
+                      size: 16,
+                      color: AppTheme.gray600,
                     ),
-                  );
-                }).toList(),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        landmark,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(color: AppTheme.gray700),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -873,13 +851,11 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
           Text(
             'Owner Details',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppTheme.deepCharcoal,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.deepCharcoal,
+                ),
           ),
-
           const SizedBox(height: 16),
-
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -901,9 +877,9 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
                       style: Theme.of(
                         context,
                       ).textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                   ),
                 ),
@@ -917,16 +893,16 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
                         style: Theme.of(
                           context,
                         ).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.deepCharcoal,
-                        ),
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.deepCharcoal,
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Property Owner',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.gray600,
-                        ),
+                              color: AppTheme.gray600,
+                            ),
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -942,9 +918,9 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
                             style: Theme.of(
                               context,
                             ).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.emeraldGreen,
-                              fontWeight: FontWeight.w500,
-                            ),
+                                  color: AppTheme.emeraldGreen,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ],
                       ),
@@ -993,11 +969,11 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '₹${_pgProperty.monthlyRent.toInt()}',
+                    '₹${_pgProperty.price.toInt()}',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.emeraldGreen,
-                    ),
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.emeraldGreen,
+                        ),
                   ),
                   Text(
                     'per month',
@@ -1023,9 +999,9 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
                 child: Text(
                   'Book Now',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
               ),
             ),
@@ -1066,9 +1042,9 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
           Text(
             price,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppTheme.emeraldGreen,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.emeraldGreen,
+                ),
           ),
         ],
       ),
@@ -1101,48 +1077,48 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
   }
 
   // Helper functions for gender and occupancy
-  IconData _getGenderIcon(GenderPreference gender) {
+  IconData _getGenderIcon(String gender) {
     switch (gender) {
-      case GenderPreference.male:
+      case 'MALE':
         return Icons.male;
-      case GenderPreference.female:
+      case 'FEMALE':
         return Icons.female;
-      case GenderPreference.coEd:
+      case 'ANY':
         return Icons.people;
       default:
         return Icons.people;
     }
   }
 
-  String _getGenderText(GenderPreference gender) {
+  String _getGenderText(String gender) {
     switch (gender) {
-      case GenderPreference.male:
+      case 'MALE':
         return 'Boys Only';
-      case GenderPreference.female:
+      case 'FEMALE':
         return 'Girls Only';
-      case GenderPreference.coEd:
-        return 'Co-ed';
-      default:
+      case 'ANY':
         return 'Any Gender';
+      default:
+        return 'Co-ed';
     }
   }
 
-  IconData _getOccupancyIcon(OccupationType type) {
+  IconData _getOccupancyIcon(String type) {
     switch (type) {
-      case OccupationType.student:
+      case 'STUDENT':
         return Icons.school;
-      case OccupationType.workingProfessional:
+      case 'PROFESSIONAL':
         return Icons.work;
       default:
         return Icons.person;
     }
   }
 
-  String _getOccupancyText(OccupationType type) {
+  String _getOccupancyText(String type) {
     switch (type) {
-      case OccupationType.student:
+      case 'STUDENT':
         return 'Students';
-      case OccupationType.workingProfessional:
+      case 'PROFESSIONAL':
         return 'Professionals';
       default:
         return 'All Welcome';

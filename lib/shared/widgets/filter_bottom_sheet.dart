@@ -1,7 +1,8 @@
+// lib/features/search/widgets/filter_bottom_sheet.dart
 import 'package:flutter/material.dart';
-import '../../shared/models/app_models.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/constants/app_constants.dart';
+import '../../../shared/models/app_models.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/constants/app_constants.dart';
 
 /// Advanced filter bottom sheet for search functionality
 class FilterBottomSheet extends StatefulWidget {
@@ -20,6 +21,34 @@ class FilterBottomSheet extends StatefulWidget {
 
 class _FilterBottomSheetState extends State<FilterBottomSheet> {
   late SearchFilter _currentFilters;
+
+  // Gender preference options
+  final List<String> _genderOptions = ['MALE', 'FEMALE', 'ANY'];
+
+  // Room type options
+  final List<String> _roomTypeOptions = [
+    'SINGLE',
+    'DOUBLE',
+    'TRIPLE',
+    'DORMITORY'
+  ];
+
+  // Amenity options
+  final List<String> _amenityOptions = [
+    'WIFI',
+    'AC',
+    'MEALS',
+    'LAUNDRY',
+    'PARKING',
+    'GYM',
+    'SECURITY',
+    'HOUSEKEEPING',
+    'HOT_WATER',
+    'POWER_BACKUP',
+    'CCTV',
+    'STUDY_ROOM',
+    'RECREATION_ROOM'
+  ];
 
   @override
   void initState() {
@@ -161,31 +190,29 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children:
-              GenderPreference.values.map((gender) {
-                final isSelected = _currentFilters.genderPreference == gender;
-                return FilterChip(
-                  label: Text(_getGenderDisplayName(gender)),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _currentFilters = _currentFilters.copyWith(
-                        genderPreference: selected ? gender : null,
-                      );
-                    });
-                  },
-                  selectedColor: AppTheme.lightMint,
-                  checkmarkColor: AppTheme.emeraldGreen,
-                  backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(
-                      color:
-                          isSelected ? AppTheme.emeraldGreen : AppTheme.gray300,
-                    ),
-                  ),
-                );
-              }).toList(),
+          children: _genderOptions.map((gender) {
+            final isSelected = _currentFilters.genderPreference == gender;
+            return FilterChip(
+              label: Text(_getGenderDisplayName(gender)),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  _currentFilters = _currentFilters.copyWith(
+                    genderPreference: selected ? gender : null,
+                  );
+                });
+              },
+              selectedColor: AppTheme.lightMint,
+              checkmarkColor: AppTheme.emeraldGreen,
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: isSelected ? AppTheme.emeraldGreen : AppTheme.gray300,
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -203,43 +230,39 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children:
-              RoomType.values.where((type) => type != RoomType.other).map((
-                roomType,
-              ) {
-                final isSelected =
-                    _currentFilters.roomTypes?.contains(roomType) ?? false;
-                return FilterChip(
-                  label: Text(_getRoomTypeDisplayName(roomType)),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      final currentRoomTypes = List<RoomType>.from(
-                        _currentFilters.roomTypes ?? [],
-                      );
-                      if (selected) {
-                        currentRoomTypes.add(roomType);
-                      } else {
-                        currentRoomTypes.remove(roomType);
-                      }
-                      _currentFilters = _currentFilters.copyWith(
-                        roomTypes:
-                            currentRoomTypes.isEmpty ? null : currentRoomTypes,
-                      );
-                    });
-                  },
-                  selectedColor: AppTheme.lightMint,
-                  checkmarkColor: AppTheme.emeraldGreen,
-                  backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(
-                      color:
-                          isSelected ? AppTheme.emeraldGreen : AppTheme.gray300,
-                    ),
-                  ),
-                );
-              }).toList(),
+          children: _roomTypeOptions.map((roomType) {
+            final isSelected =
+                _currentFilters.roomTypes?.contains(roomType) ?? false;
+            return FilterChip(
+              label: Text(_getRoomTypeDisplayName(roomType)),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  final currentRoomTypes = List<String>.from(
+                    _currentFilters.roomTypes ?? [],
+                  );
+                  if (selected) {
+                    currentRoomTypes.add(roomType);
+                  } else {
+                    currentRoomTypes.remove(roomType);
+                  }
+                  _currentFilters = _currentFilters.copyWith(
+                    roomTypes:
+                        currentRoomTypes.isEmpty ? null : currentRoomTypes,
+                  );
+                });
+              },
+              selectedColor: AppTheme.lightMint,
+              checkmarkColor: AppTheme.emeraldGreen,
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: isSelected ? AppTheme.emeraldGreen : AppTheme.gray300,
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -257,48 +280,39 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children:
-              AmenityType.values.where((type) => type != AmenityType.other).map(
-                (amenity) {
-                  final isSelected =
-                      _currentFilters.requiredAmenities?.contains(amenity) ??
-                      false;
-                  return FilterChip(
-                    label: Text(_getAmenityDisplayName(amenity)),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        final currentAmenities = List<AmenityType>.from(
-                          _currentFilters.requiredAmenities ?? [],
-                        );
-                        if (selected) {
-                          currentAmenities.add(amenity);
-                        } else {
-                          currentAmenities.remove(amenity);
-                        }
-                        _currentFilters = _currentFilters.copyWith(
-                          requiredAmenities:
-                              currentAmenities.isEmpty
-                                  ? null
-                                  : currentAmenities,
-                        );
-                      });
-                    },
-                    selectedColor: AppTheme.lightMint,
-                    checkmarkColor: AppTheme.emeraldGreen,
-                    backgroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      side: BorderSide(
-                        color:
-                            isSelected
-                                ? AppTheme.emeraldGreen
-                                : AppTheme.gray300,
-                      ),
-                    ),
+          children: _amenityOptions.map((amenity) {
+            final isSelected =
+                _currentFilters.requiredAmenities?.contains(amenity) ?? false;
+            return FilterChip(
+              label: Text(_getAmenityDisplayName(amenity)),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  final currentAmenities = List<String>.from(
+                    _currentFilters.requiredAmenities ?? [],
                   );
-                },
-              ).toList(),
+                  if (selected) {
+                    currentAmenities.add(amenity);
+                  } else {
+                    currentAmenities.remove(amenity);
+                  }
+                  _currentFilters = _currentFilters.copyWith(
+                    requiredAmenities:
+                        currentAmenities.isEmpty ? null : currentAmenities,
+                  );
+                });
+              },
+              selectedColor: AppTheme.lightMint,
+              checkmarkColor: AppTheme.emeraldGreen,
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: isSelected ? AppTheme.emeraldGreen : AppTheme.gray300,
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -332,10 +346,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                   side: BorderSide(
-                    color:
-                        _currentFilters.mealsIncluded == true
-                            ? AppTheme.emeraldGreen
-                            : AppTheme.gray300,
+                    color: _currentFilters.mealsIncluded == true
+                        ? AppTheme.emeraldGreen
+                        : AppTheme.gray300,
                   ),
                 ),
               ),
@@ -358,10 +371,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                   side: BorderSide(
-                    color:
-                        _currentFilters.mealsIncluded == false
-                            ? AppTheme.emeraldGreen
-                            : AppTheme.gray300,
+                    color: _currentFilters.mealsIncluded == false
+                        ? AppTheme.emeraldGreen
+                        : AppTheme.gray300,
                   ),
                 ),
               ),
@@ -498,63 +510,63 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     Navigator.pop(context);
   }
 
-  String _getGenderDisplayName(GenderPreference gender) {
+  String _getGenderDisplayName(String gender) {
     switch (gender) {
-      case GenderPreference.male:
+      case 'MALE':
         return 'Male';
-      case GenderPreference.female:
+      case 'FEMALE':
         return 'Female';
-      case GenderPreference.coEd:
-        return 'Co-ed';
-      case GenderPreference.any:
+      case 'ANY':
         return 'Any';
+      default:
+        return 'Co-ed';
     }
   }
 
-  String _getRoomTypeDisplayName(RoomType roomType) {
+  String _getRoomTypeDisplayName(String roomType) {
     switch (roomType) {
-      case RoomType.single:
+      case 'SINGLE':
         return 'Single';
-      case RoomType.double:
+      case 'DOUBLE':
         return 'Double';
-      case RoomType.triple:
+      case 'TRIPLE':
         return 'Triple';
-      case RoomType.dormitory:
+      case 'DORMITORY':
         return 'Dormitory';
-      case RoomType.other:
+      default:
         return 'Other';
     }
   }
 
-  String _getAmenityDisplayName(AmenityType amenity) {
+  String _getAmenityDisplayName(String amenity) {
     switch (amenity) {
-      case AmenityType.wifi:
+      case 'WIFI':
         return 'Wi-Fi';
-      case AmenityType.ac:
+      case 'AC':
         return 'AC';
-      case AmenityType.meals:
+      case 'MEALS':
         return 'Meals';
-      case AmenityType.laundry:
+      case 'LAUNDRY':
         return 'Laundry';
-      case AmenityType.parking:
+      case 'PARKING':
         return 'Parking';
-      case AmenityType.gym:
+      case 'GYM':
         return 'Gym';
-      case AmenityType.security:
+      case 'SECURITY':
         return 'Security';
-      case AmenityType.housekeeping:
+      case 'HOUSEKEEPING':
         return 'Housekeeping';
-      case AmenityType.hotWater:
+      case 'HOT_WATER':
         return 'Hot Water';
-      case AmenityType.powerBackup:
+      case 'POWER_BACKUP':
         return 'Power Backup';
-      case AmenityType.cctv:
+      case 'CCTV':
         return 'CCTV';
-      case AmenityType.studyRoom:
+      case 'STUDY_ROOM':
         return 'Study Room';
-      case AmenityType.recreationRoom:
+      case 'RECREATION_ROOM':
         return 'Recreation Room';
-      case AmenityType.other:
+      default:
         return 'Other';
     }
   }

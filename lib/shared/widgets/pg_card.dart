@@ -1,12 +1,29 @@
+// lib/shared/widgets/pg_card.dart
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../models/app_models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 
-/// Reusable PG card widget with different variants for different use cases
+/// Variant types for PG card display
+enum PGCardVariant {
+  /// Standard card with basic info
+  standard,
+
+  /// Compact card for horizontal lists
+  compact,
+
+  /// Detailed card with more information
+  detailed,
+
+  /// Map card for displaying in map callouts
+  map,
+}
+
+/// Reusable PG card widget with different variants
 class PGCard extends StatelessWidget {
   final PGProperty pgProperty;
   final VoidCallback? onTap;
@@ -34,7 +51,7 @@ class PGCard extends StatelessWidget {
     return Card(
       elevation: AppTheme.elevationSm,
       clipBehavior: Clip.antiAlias,
-      margin: EdgeInsets.zero,
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
@@ -64,145 +81,101 @@ class PGCard extends StatelessWidget {
                   ? CachedNetworkImage(
                     imageUrl: pgProperty.images.first,
                     fit: BoxFit.cover,
-                    placeholder:
-                        (context, url) => Container(
-                          color: Colors.grey[300],
-                          child: const Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                        ),
-                    errorWidget:
-                        (context, url, error) => Container(
-                          color: Colors.grey[300],
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey,
-                          ),
-                        ),
+                    placeholder: (context, url) => _buildImagePlaceholder(),
+                    errorWidget: (context, url, error) => _buildImageError(),
                   )
-                  : Container(
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: Icon(
-                        Icons.home_work,
-                        color: Colors.grey,
-                        size: 40,
-                      ),
-                    ),
-                  ),
+                  : _buildImagePlaceholder(),
         ),
 
-        // Gradient overlay for better text visibility
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
-                stops: const [0.6, 1.0],
-              ),
-            ),
+        // Tags
+        Positioned(
+          top: 12,
+          left: 12,
+          child: Row(
+            children: [
+              if (pgProperty.isVerified)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.emeraldGreen,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.verified, color: Colors.white, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Verified',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (pgProperty.isVerified && pgProperty.isFeatured)
+                const SizedBox(width: 8),
+              if (pgProperty.isFeatured)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warmYellow,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.black87, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Featured',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
 
         // Wishlist button
-        Positioned(
-          top: 8,
-          right: 8,
-          child: GestureDetector(
-            onTap: onWishlistTap,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isWishlisted ? Icons.favorite : Icons.favorite_border,
-                color: isWishlisted ? Colors.red : Colors.grey[600],
-                size: 18,
-              ),
-            ),
-          ),
-        ),
-
-        // Verified badge
-        if (pgProperty.isVerified)
+        if (onWishlistTap != null)
           Positioned(
             top: 8,
-            left: 8,
+            right: 8,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.success,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.verified, color: Colors.white, size: 12),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Verified',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                    ),
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-            ),
-          ),
-
-        // Price
-        Positioned(
-          bottom: 8,
-          right: 8,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppTheme.emeraldGreen,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              '₹${pgProperty.monthlyRent.toInt()}/mo',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-
-        // Available rooms
-        if (pgProperty.availableRooms > 0)
-          Positioned(
-            bottom: 8,
-            left: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color:
-                    pgProperty.availableRooms <= 2
-                        ? Colors.orange
-                        : Colors.blue,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                pgProperty.availableRooms <= 2
-                    ? 'Only ${pgProperty.availableRooms} left!'
-                    : '${pgProperty.availableRooms} available',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
+              child: IconButton(
+                icon: Icon(
+                  isWishlisted ? Icons.favorite : Icons.favorite_border,
+                  color: isWishlisted ? Colors.red : Colors.grey,
                 ),
+                onPressed: onWishlistTap,
+                constraints: const BoxConstraints.tightFor(
+                  width: 36,
+                  height: 36,
+                ),
+                padding: EdgeInsets.zero,
+                iconSize: 20,
               ),
             ),
           ),
@@ -214,210 +187,351 @@ class PGCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title and rating
+        // Name and price row
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Name with gender indicator
             Expanded(
-              child: Text(
-                pgProperty.name,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    pgProperty.name,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      _buildGenderIndicator(context),
+                      if (pgProperty.mealsIncluded) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.lightMint,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Meals',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelSmall?.copyWith(
+                              color: AppTheme.emeraldGreen,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 4),
-            Row(
-              children: [
-                const Icon(Icons.star, color: Colors.amber, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  pgProperty.rating.toString(),
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-              ],
-            ),
-          ],
-        ),
 
-        const SizedBox(height: 4),
-
-        // Location
-        Row(
-          children: [
-            const Icon(Icons.location_on, size: 14, color: Colors.grey),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                pgProperty.address,
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            // Price
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.emeraldGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(4),
               ),
-            ),
-            if (showDistance && distance != null) ...[
-              const SizedBox(width: 4),
-              Text(
-                '${distance!.toStringAsFixed(1)} km',
-                style: TextStyle(
+              child: Text(
+                '₹${pgProperty.price.toStringAsFixed(0)}/mo',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   color: AppTheme.emeraldGreen,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ],
+            ),
           ],
         ),
 
         const SizedBox(height: 8),
 
-        // Amenities
-        if (variant != PGCardVariant.compact)
+        // Address
+        Text(
+          pgProperty.address,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+
+        const SizedBox(height: 12),
+
+        // Rating and distance
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Rating
+            Row(
+              children: [
+                RatingBar.builder(
+                  initialRating: pgProperty.rating,
+                  minRating: 0,
+                  direction: Axis.horizontal,
+                  allowHalfRating: true,
+                  itemCount: 5,
+                  itemSize: 16,
+                  ignoreGestures: true,
+                  itemBuilder:
+                      (context, _) =>
+                          const Icon(Icons.star, color: Colors.amber),
+                  onRatingUpdate: (rating) {},
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '(${pgProperty.reviewCount})',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+
+            // Distance
+            if (showDistance && distance != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.location_on, size: 12, color: Colors.grey),
+                    const SizedBox(width: 2),
+                    Text(
+                      '${distance!.toStringAsFixed(1)} km',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+
+        // Amenities (for detailed variant only)
+        if (variant == PGCardVariant.detailed) ...[
+          const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _buildAmenityChips(pgProperty.amenities),
+            children:
+                pgProperty.amenities.take(4).map((amenity) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      amenity,
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  );
+                }).toList(),
           ),
+        ],
 
-        if (variant == PGCardVariant.detailed) ...[
+        // Contact button (for detailed variant only)
+        if (variant == PGCardVariant.detailed && onContactTap != null) ...[
           const SizedBox(height: 12),
-
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onContactTap,
-                  icon: const Icon(Icons.phone, size: 16),
-                  label: const Text('Contact'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.emeraldGreen,
-                    side: BorderSide(color: AppTheme.emeraldGreen),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
+          ElevatedButton(
+            onPressed: onContactTap,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.emeraldGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: onTap,
-                  icon: const Icon(Icons.visibility, size: 16),
-                  label: const Text('View'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.emeraldGreen,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              minimumSize: const Size(double.infinity, 36),
+            ),
+            child: const Text('Contact'),
           ),
         ],
       ],
     );
   }
 
-  List<Widget> _buildAmenityChips(List<AmenityType> amenities) {
-    // Map of amenities to icons and display names
-    final amenityIcons = {
-      AmenityType.wifi: Icons.wifi,
-      AmenityType.ac: Icons.ac_unit,
-      AmenityType.meals: Icons.restaurant,
-      AmenityType.laundry: Icons.local_laundry_service,
-      AmenityType.parking: Icons.local_parking,
-      AmenityType.gym: Icons.fitness_center,
-      AmenityType.security: Icons.security,
-      AmenityType.housekeeping: Icons.cleaning_services,
-      AmenityType.hotWater: Icons.water_drop,
-      AmenityType.powerBackup: Icons.power,
-      AmenityType.cctv: Icons.videocam,
-      AmenityType.studyRoom: Icons.book,
-      AmenityType.recreationRoom: Icons.sports_esports,
-    };
+  Widget _buildGenderIndicator(BuildContext context) {
+    Color color;
+    IconData icon;
+    String text;
 
-    final amenityNames = {
-      AmenityType.wifi: 'Wi-Fi',
-      AmenityType.ac: 'AC',
-      AmenityType.meals: 'Meals',
-      AmenityType.laundry: 'Laundry',
-      AmenityType.parking: 'Parking',
-      AmenityType.gym: 'Gym',
-      AmenityType.security: 'Security',
-      AmenityType.housekeeping: 'Cleaning',
-      AmenityType.hotWater: 'Hot Water',
-      AmenityType.powerBackup: 'Power Backup',
-      AmenityType.cctv: 'CCTV',
-      AmenityType.studyRoom: 'Study Room',
-      AmenityType.recreationRoom: 'Recreation',
-    };
+    switch (pgProperty.genderPreference) {
+      case 'MALE':
+        color = Colors.blue;
+        icon = Icons.male;
+        text = 'Male';
+        break;
+      case 'FEMALE':
+        color = Colors.pink;
+        icon = Icons.female;
+        text = 'Female';
+        break;
+      case 'ANY':
+      default:
+        color = Colors.purple;
+        icon = Icons.people;
+        text = 'Any';
+        break;
+    }
 
-    // Display top 3 amenities + more if needed
-    final displayAmenities = amenities.take(3).toList();
-
-    return displayAmenities.map((amenity) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppTheme.lightMint.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                amenityIcons[amenity] ?? Icons.check,
-                size: 12,
-                color: AppTheme.emeraldGreen,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                amenityNames[amenity] ?? 'Other',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: AppTheme.emeraldGreen,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList()
-      ..addAll([
-        if (amenities.length > 3)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              '+${amenities.length - 3} more',
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey[700],
-                fontWeight: FontWeight.w500,
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w500,
             ),
           ),
-      ]);
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImagePlaceholder() {
+    return Container(
+      color: Colors.grey[200],
+      child: Center(
+        child: Icon(Icons.home_work_rounded, color: Colors.grey[400], size: 40),
+      ),
+    );
+  }
+
+  Widget _buildImageError() {
+    return Container(
+      color: Colors.grey[200],
+      child: Center(
+        child: Icon(
+          Icons.broken_image_rounded,
+          color: Colors.grey[400],
+          size: 40,
+        ),
+      ),
+    );
   }
 }
 
-/// PG card variants for different use cases
-enum PGCardVariant {
-  /// Standard card with all basic information
-  standard,
+/// Shimmer loading effect for PG cards
+class PGCardShimmer extends StatelessWidget {
+  final PGCardVariant variant;
 
-  /// Compact card for grid layouts
-  compact,
+  const PGCardShimmer({super.key, this.variant = PGCardVariant.standard});
 
-  /// Detailed card with action buttons
-  detailed,
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Card(
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image placeholder
+            Container(
+              height: variant == PGCardVariant.compact ? 120 : 180,
+              width: double.infinity,
+              color: Colors.white,
+            ),
+
+            // Content placeholder
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Name
+                      Container(width: 150, height: 20, color: Colors.white),
+
+                      // Price
+                      Container(width: 80, height: 24, color: Colors.white),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Address
+                  Container(
+                    width: double.infinity,
+                    height: 16,
+                    color: Colors.white,
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Bottom row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Rating
+                      Container(width: 100, height: 16, color: Colors.white),
+
+                      // Distance
+                      Container(width: 60, height: 16, color: Colors.white),
+                    ],
+                  ),
+
+                  // Extra for detailed variant
+                  if (variant == PGCardVariant.detailed) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: List.generate(4, (index) {
+                        return Container(
+                          width: 60,
+                          height: 24,
+                          margin: const EdgeInsets.only(right: 8),
+                          color: Colors.white,
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      height: 36,
+                      color: Colors.white,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
