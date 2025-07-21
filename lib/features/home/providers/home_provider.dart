@@ -38,8 +38,8 @@ class HomeProvider extends ChangeNotifier {
   bool _hasMoreData = true;
 
   // Search and filters
-  String _searchQuery = '';
-  SearchFilter _appliedFilters = const SearchFilter();
+  final String _searchQuery = '';
+  final SearchFilter _appliedFilters = const SearchFilter();
   List<String> _recentSearches = [];
 
   // Promotional data
@@ -235,7 +235,7 @@ class HomeProvider extends ChangeNotifier {
           _pgList.take(5).map((pg) {
             return pg.copyWith(
               id: '${pg.id}_page_$_currentPage',
-              name: '${pg.name} ${_currentPage}',
+              name: '${pg.name} $_currentPage',
             );
           }).toList();
 

@@ -1,9 +1,10 @@
 // lib/features/offers/providers/offers_provider.dart
 import 'package:flutter/foundation.dart';
+import 'package:nearby_pg/features/offers/screens/offers_screen.dart';
+import 'package:nearby_pg/shared/models/app_models.dart';
 
 import '../../../core/services/api_service.dart';
 import '../../../core/services/cache_service.dart';
-import '../screens/offers_screen.dart';
 
 /// Provider for Offers screen functionality
 class OffersProvider with ChangeNotifier {
@@ -21,7 +22,7 @@ class OffersProvider with ChangeNotifier {
   List<Coupon> _coupons = [];
   List<Referral> _referrals = [];
   String _referralCode = '';
-  double _referralBonus = 500;
+  final double _referralBonus = 500;
 
   // Getters
   bool get isLoading => _isLoading;

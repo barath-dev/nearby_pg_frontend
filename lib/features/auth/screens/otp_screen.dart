@@ -207,7 +207,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
       if (mounted) {
         // Navigate to appropriate screen based on flow
         if (isSignup) {
-          NavigationService.navigateToHome();
+          NavigationService.navigateToHome(context);
         } else {
           Navigator.pop(context, true); // Return success to previous screen
         }
@@ -324,7 +324,8 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: AppTheme.emeraldGreen),
+          icon: const Icon(Icons.arrow_back_rounded,
+              color: AppTheme.emeraldGreen),
           onPressed: _goBack,
         ),
         systemOverlayStyle: const SystemUiOverlayStyle(
@@ -378,12 +379,14 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.error_outline, color: AppTheme.error, size: 18),
+                    const Icon(Icons.error_outline,
+                        color: AppTheme.error, size: 18),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _errorMessage,
-                        style: TextStyle(color: AppTheme.error, fontSize: 14),
+                        style: const TextStyle(
+                            color: AppTheme.error, fontSize: 14),
                       ),
                     ),
                   ],
@@ -418,9 +421,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
           Text(
             'Verification Successful!',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: AppTheme.deepCharcoal,
-            ),
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.deepCharcoal,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -433,7 +436,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
             ).textTheme.bodyMedium?.copyWith(color: AppTheme.gray600),
           ),
           const SizedBox(height: 24),
-          Text(
+          const Text(
             'Redirecting...',
             style: TextStyle(
               color: AppTheme.emeraldGreen,
@@ -456,7 +459,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
             color: AppTheme.emeraldGreen.withOpacity(0.1),
             borderRadius: BorderRadius.circular(50),
           ),
-          child: Icon(
+          child: const Icon(
             Icons.sms_rounded,
             size: 48,
             color: AppTheme.emeraldGreen,
@@ -468,9 +471,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
         Text(
           'Verify Phone Number',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: AppTheme.deepCharcoal,
-            fontWeight: FontWeight.w700,
-          ),
+                color: AppTheme.deepCharcoal,
+                fontWeight: FontWeight.w700,
+              ),
         ),
         const SizedBox(height: 12),
 
@@ -485,7 +488,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
               const TextSpan(text: 'We\'ve sent a 6-digit code to\n'),
               TextSpan(
                 text: '+91 $phoneNumber',
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppTheme.emeraldGreen,
                   fontWeight: FontWeight.w600,
                 ),
@@ -517,9 +520,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
           Text(
             'Enter OTP Code',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppTheme.deepCharcoal,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.deepCharcoal,
+                ),
           ),
           const SizedBox(height: 24),
 
@@ -533,11 +536,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
 
           // Security note
           const SizedBox(height: 24),
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.lock_outline, size: 14, color: AppTheme.gray500),
-              const SizedBox(width: 4),
+              SizedBox(width: 4),
               Text(
                 'Your OTP is secure and encrypted',
                 style: TextStyle(fontSize: 12, color: AppTheme.gray500),
@@ -562,9 +565,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
         textAlign: TextAlign.center,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: AppTheme.deepCharcoal,
-        ),
+              fontWeight: FontWeight.w600,
+              color: AppTheme.deepCharcoal,
+            ),
         onChanged: (value) => _handleOTPInput(value, index),
         decoration: InputDecoration(
           counterText: '',
@@ -572,19 +575,20 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
           fillColor: AppTheme.gray50,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppTheme.gray300),
+            borderSide: const BorderSide(color: AppTheme.gray300),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppTheme.gray300),
+            borderSide: const BorderSide(color: AppTheme.gray300),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppTheme.emeraldGreen, width: 2),
+            borderSide:
+                const BorderSide(color: AppTheme.emeraldGreen, width: 2),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppTheme.error, width: 2),
+            borderSide: const BorderSide(color: AppTheme.error, width: 2),
           ),
           contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
@@ -609,23 +613,22 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
           elevation: 2,
           shadowColor: AppTheme.emeraldGreen.withOpacity(0.3),
         ),
-        child:
-            _isLoading
-                ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-                : Text(
-                  'Verify & Continue',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
+        child: _isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
+              )
+            : Text(
+                'Verify & Continue',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+              ),
       ),
     );
   }
@@ -641,16 +644,14 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
           ).textTheme.bodyMedium?.copyWith(color: AppTheme.gray600),
         ),
         const SizedBox(height: 8),
-
         GestureDetector(
           onTap: _canResend ? _resendOTP : null,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color:
-                  _canResend
-                      ? AppTheme.emeraldGreen.withOpacity(0.1)
-                      : Colors.transparent,
+              color: _canResend
+                  ? AppTheme.emeraldGreen.withOpacity(0.1)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -665,23 +666,23 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
                 Text(
                   _canResend ? 'Resend OTP' : 'Resend in ${_resendTimer}s',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color:
-                        _canResend ? AppTheme.emeraldGreen : AppTheme.gray400,
-                  ),
+                        fontWeight: FontWeight.w600,
+                        color: _canResend
+                            ? AppTheme.emeraldGreen
+                            : AppTheme.gray400,
+                      ),
                 ),
               ],
             ),
           ),
         ),
-
         if (isSignup) ...[
           const SizedBox(height: 32),
-          Row(
+          const Row(
             children: [
               Expanded(child: Divider(color: AppTheme.gray300)),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   'Account Info',
                   style: TextStyle(
@@ -730,7 +731,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
           width: 80,
           child: Text(
             '$label:',
-            style: TextStyle(
+            style: const TextStyle(
               color: AppTheme.gray600,
               fontWeight: FontWeight.w500,
             ),

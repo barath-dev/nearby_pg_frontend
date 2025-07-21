@@ -26,6 +26,12 @@
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>NEARBY PG needs access to your location to find nearby PG accommodations and provide accurate distance information.</string>
+	
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>NEARBY PG needs access to your location to provide you with the best PG accommodations near you and accurate distance calculations even when the app is in the background.</string>
+
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UISupportedInterfaceOrientations</key>

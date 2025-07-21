@@ -1,258 +1,361 @@
 import 'package:flutter/material.dart';
-import 'package:nearby_pg/features/auth/screens/auth_screen.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:nearby_pg/features/auth/screens/login_screen.dart';
+import 'package:nearby_pg/features/auth/screens/signup_screen.dart';
+import 'package:nearby_pg/features/offers/screens/offers_screen.dart';
 
-// Import screens
-import '../../shared/widgets/splash_screen.dart';
-import '../../shared/widgets/main_navigation_wrapper.dart';
+// Import your screens
 import '../../features/home/screens/home_screen.dart';
 import '../../features/search/screens/search_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 
-// Import constants
+// Import constants and theme
 import '../constants/app_constants.dart';
+import '../theme/app_theme.dart';
 
-/// Navigation service for traditional Flutter navigation
+/// Service for handling navigation and routing in the app
 class NavigationService {
-  static final GlobalKey<NavigatorState> navigatorKey =
-      GlobalKey<NavigatorState>();
+  // App scaffolds
+  final GlobalKey<NavigatorState> _rootNavigatorKey =
+      GlobalKey<NavigatorState>(debugLabel: 'root');
+  final GlobalKey<NavigatorState> _shellNavigatorKey =
+      GlobalKey<NavigatorState>(debugLabel: 'shell');
 
-  /// Generate route for traditional navigation
-  static Route<dynamic> generateRoute(RouteSettings settings) {
-    switch (settings.name) {
-      case AppConstants.splashRoute:
-        return MaterialPageRoute(builder: (_) => const SplashScreen());
+  // Current route path
+  String _currentPath = '/';
 
-      // Authentication routes
-      case AppConstants.loginRoute:
-        return MaterialPageRoute(
-          builder: (_) => const LoginScreen(),
-          settings: settings,
-        );
+  // Bottom navigation state
+  int _currentIndex = 0;
 
-      case AppConstants.signupRoute:
-        return MaterialPageRoute(
-          builder: (_) => const SignupScreen(),
-          settings: settings,
-        );
+  /// Get the current path
+  String get currentPath => _currentPath;
 
-      case AppConstants.otpRoute:
-        final arguments = settings.arguments as Map<String, dynamic>? ?? {};
-        return MaterialPageRoute(
-          builder: (_) => OTPVerificationScreen(arguments: arguments),
-          settings: settings,
-        );
+  /// Get the current bottom navigation index
+  int get currentIndex => _currentIndex;
 
-      // Main app with bottom navigation
-      case AppConstants.homeRoute:
-        return MaterialPageRoute(builder: (_) => const MainNavigationWrapper());
+  /// Create and configure the router
+  late final GoRouter router = GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: '/splash',
+    debugLogDiagnostics: true,
 
-      // Individual screens for direct navigation (if needed)
-      case '/home-only':
-        return MaterialPageRoute(builder: (_) => const HomeScreen());
+    // Define routes
+    routes: [
+      // Splash Screen Route
+      GoRoute(
+        path: '/splash',
+        name: 'splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
 
-      case AppConstants.searchRoute:
-        return MaterialPageRoute(builder: (_) => const SearchScreen());
+      // Shell route for bottom navigation
+      ShellRoute(
+        navigatorKey: _shellNavigatorKey,
+        builder: (context, state, child) {
+          // Extract the current index from the location
+          _updateBottomNavIndex(state.uri.toString());
 
-      case AppConstants.profileRoute:
-        return MaterialPageRoute(builder: (_) => const ProfileScreen());
+          return MainNavigationWrapper(
+            currentIndex: _currentIndex,
+            child: child,
+            onTabTapped: (index) => _onBottomNavTap(index, context),
+          );
+        },
+        routes: [
+          // Home tab
+          GoRoute(
+            path: '/',
+            name: AppConstants.homeRoute,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: HomeScreen(),
+            ),
+          ),
 
-      // Detail screens that should be pushed on top of bottom navigation
-      case AppConstants.pgDetailRoute:
-        final pgId = settings.arguments as String? ?? '';
-        return MaterialPageRoute(
-          builder: (_) => PGDetailScreen(pgId: pgId),
-          settings: settings,
-        );
+          // Search tab
+          GoRoute(
+            path: '/search',
+            name: AppConstants.searchRoute,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: SearchScreen(),
+            ),
+          ),
 
-      case AppConstants.bookingRoute:
-        final pgId = settings.arguments as String? ?? '';
-        return MaterialPageRoute(
-          builder: (_) => BookingScreen(pgId: pgId),
-          settings: settings,
-        );
+          // Offers tab
+          GoRoute(
+            path: '/offers',
+            name: AppConstants.offersRoute,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: OffersScreen(),
+            ),
+          ),
 
-      case AppConstants.settingsRoute:
-        return MaterialPageRoute(
-          builder: (_) => const SettingsScreen(),
-          settings: settings,
-        );
+          // Profile tab
+          GoRoute(
+            path: '/profile',
+            name: AppConstants.profileRoute,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: ProfileScreen(),
+            ),
+          ),
+        ],
+      ),
 
-      case AppConstants.wishlistRoute:
-        return MaterialPageRoute(
-          builder: (_) => const WishlistScreen(),
-          settings: settings,
-        );
+      // Routes outside the bottom navigation
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/pg/:id',
+        name: AppConstants.pgDetailRoute,
+        builder: (context, state) {
+          final pgId = state.pathParameters['id']!;
+          return PGDetailScreen(pgId: pgId);
+        },
+      ),
 
-      case AppConstants.mapViewRoute:
-        return MaterialPageRoute(
-          builder: (_) => const MapViewScreen(),
-          settings: settings,
-        );
+      // Booking route
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/booking/:pgId',
+        name: 'booking',
+        builder: (context, state) {
+          final pgId = state.pathParameters['pgId']!;
+          return BookingScreen(pgId: pgId);
+        },
+      ),
 
-      case AppConstants.filterRoute:
-        return MaterialPageRoute(
-          builder: (_) => const FilterScreen(),
-          settings: settings,
-        );
+      // Settings route
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/settings',
+        name: 'settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
 
-      default:
-        return MaterialPageRoute(
-          builder:
-              (_) => ErrorScreen(error: 'Route ${settings.name} not found'),
-        );
+      // Wishlist route
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/wishlist',
+        name: 'wishlist',
+        builder: (context, state) => const WishlistScreen(),
+      ),
+
+      // Map view route
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/map',
+        name: 'map',
+        builder: (context, state) => const MapViewScreen(),
+      ),
+
+      // Filter route
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/filter',
+        name: 'filter',
+        builder: (context, state) => const FilterScreen(),
+      ),
+
+      // Auth routes
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/login',
+        name: AppConstants.loginRoute,
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: LoginScreen(),
+        ),
+      ),
+
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/signup',
+        name: AppConstants.signupRoute,
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: SignupScreen(),
+        ),
+      ),
+
+      // OTP route
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/otp',
+        name: AppConstants.otpRoute,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return OTPScreen(
+            phoneNumber: extra?['phoneNumber'] ?? '',
+            isSignup: extra?['isSignup'] ?? false,
+          );
+        },
+      ),
+    ],
+
+    // Route change listener
+    observers: [
+      GoRouterObserver(
+        onChanged: (state) {
+          _currentPath = state?.uri.toString() ?? '/';
+        },
+      ),
+    ],
+
+    // Error page
+    errorPageBuilder: (context, state) {
+      return MaterialPage(
+        key: state.pageKey,
+        child: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Page not found',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'The requested page does not exist.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => context.go('/'),
+                  child: const Text('Go Home'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+
+  /// Handle bottom navigation tab changes
+  void _onBottomNavTap(int index, BuildContext context) {
+    if (_currentIndex == index) return;
+
+    switch (index) {
+      case 0:
+        context.go('/');
+        break;
+      case 1:
+        context.go('/search');
+        break;
+      case 2:
+        context.go('/offers');
+        break;
+      case 3:
+        context.go('/profile');
+        break;
+    }
+  }
+
+  /// Update bottom navigation index based on current route
+  void _updateBottomNavIndex(String location) {
+    if (location == '/' || location.startsWith('/?')) {
+      _currentIndex = 0;
+    } else if (location.startsWith('/search')) {
+      _currentIndex = 1;
+    } else if (location.startsWith('/offers')) {
+      _currentIndex = 2;
+    } else if (location.startsWith('/profile')) {
+      _currentIndex = 3;
     }
   }
 
   /// Navigate to a named route
-  static Future<dynamic> navigateTo(String routeName, {Object? arguments}) {
-    return navigatorKey.currentState!.pushNamed(
+  void navigateTo(BuildContext context, String routeName, {Object? arguments}) {
+    context.goNamed(routeName, extra: arguments);
+  }
+
+  /// Navigate to a route with parameters
+  void navigateToWithParams(
+    BuildContext context,
+    String routeName, {
+    Map<String, String> pathParameters = const {},
+    Map<String, dynamic> queryParameters = const {},
+    Object? extra,
+  }) {
+    context.goNamed(
       routeName,
-      arguments: arguments,
+      pathParameters: pathParameters,
+      queryParameters: queryParameters,
+      extra: extra,
     );
   }
 
-  /// Push a new route onto the navigation stack
-  static Future<dynamic> pushTo(String routeName, {Object? arguments}) {
-    return navigatorKey.currentState!.pushNamed(
-      routeName,
-      arguments: arguments,
-    );
-  }
-
-  /// Pop the current route
-  static void goBack() {
-    if (navigatorKey.currentState!.canPop()) {
-      navigatorKey.currentState!.pop();
-    }
-  }
-
-  /// Replace the current route
-  static Future<dynamic> replaceTo(String routeName, {Object? arguments}) {
-    return navigatorKey.currentState!.pushReplacementNamed(
-      routeName,
-      arguments: arguments,
-    );
-  }
-
-  /// Navigate to home and clear stack (shows main app with bottom navigation)
-  static void navigateToHome() {
-    navigatorKey.currentState!.pushNamedAndRemoveUntil(
-      AppConstants.homeRoute,
-      (route) => false,
-    );
-  }
-
-  /// Navigate to login and clear stack
-  static void navigateToLogin() {
-    navigatorKey.currentState!.pushNamedAndRemoveUntil(
-      AppConstants.loginRoute,
-      (route) => false,
-    );
-  }
-
-  /// Navigate to signup
-  static Future<dynamic> navigateToSignup() {
-    return navigatorKey.currentState!.pushNamed(AppConstants.signupRoute);
-  }
-
-  /// Navigate to OTP verification
-  static Future<dynamic> navigateToOTP(Map<String, dynamic> arguments) {
-    return navigatorKey.currentState!.pushNamed(
-      AppConstants.otpRoute,
-      arguments: arguments,
-    );
-  }
-
-  /// Check authentication status and navigate accordingly
-  static void checkAuthAndNavigate() {
-    // TODO: Implement actual authentication check
-    // For now, always navigate to login
-    const bool isLoggedIn = false; // Replace with actual auth check
-
-    if (isLoggedIn) {
-      navigateToHome();
+  /// Go back to previous page
+  void goBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
     } else {
-      navigateToLogin();
+      context.go('/');
     }
   }
 
-  /// Show modal bottom sheet
-  static Future<T?> showBottomSheet<T>({
-    required BuildContext context,
-    required Widget child,
-    bool isScrollControlled = false,
-    bool isDismissible = true,
-    bool enableDrag = true,
-  }) {
-    return showModalBottomSheet<T>(
-      context: context,
-      isScrollControlled: isScrollControlled,
-      isDismissible: isDismissible,
-      enableDrag: enableDrag,
-      backgroundColor: Colors.transparent,
-      builder:
-          (context) => Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-            ),
-            child: child,
-          ),
-    );
+  /// Navigate from splash to home
+  static void navigateFromSplashToHome(BuildContext context) {
+    context.go('/');
   }
 
-  /// Show dialog
-  static Future<T?> showAppDialog<T>({
-    required BuildContext context,
-    required Widget child,
-    bool barrierDismissible = true,
-  }) {
-    return showDialog<T>(
-      context: context,
-      barrierDismissible: barrierDismissible,
-      builder: (context) => child,
-    );
+  /// Navigate to login screen
+  static void navigateToLogin(BuildContext context) {
+    context.go('/login');
   }
 
-  /// Show snackbar with app theming
-  static void showSnackBar({
-    required BuildContext context,
-    required String message,
-    bool isError = false,
-    Duration duration = const Duration(seconds: 3),
-    VoidCallback? onActionPressed,
-    String? actionLabel,
-  }) {
-    final snackBar = SnackBar(
-      content: Text(
-        message,
-        style: const TextStyle(
-          fontWeight: FontWeight.w500,
-          color: Colors.white,
-        ),
-      ),
-      duration: duration,
-      backgroundColor:
-          isError ? const Color(0xFFF44336) : const Color(0xFF2E7D32),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      margin: const EdgeInsets.all(16),
-      action:
-          onActionPressed != null && actionLabel != null
-              ? SnackBarAction(
-                label: actionLabel,
-                onPressed: onActionPressed,
-                textColor: Colors.white,
-              )
-              : null,
-    );
+  /// Navigate to home screen
+  static void navigateToHome(BuildContext context) {
+    context.go('/');
+  }
 
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(snackBar);
+  /// Navigate to PG detail screen
+  static void navigateToPGDetail(BuildContext context, String pgId) {
+    context.go('/pg/$pgId');
+  }
+
+  /// Navigate to booking screen
+  static void navigateToBooking(BuildContext context, String pgId) {
+    context.go('/booking/$pgId');
+  }
+
+  /// Navigate to settings screen
+  static void navigateToSettings(BuildContext context) {
+    context.go('/settings');
+  }
+
+  /// Navigate to wishlist screen
+  static void navigateToWishlist(BuildContext context) {
+    context.go('/wishlist');
+  }
+
+  /// Navigate to map view screen
+  static void navigateToMap(BuildContext context) {
+    context.go('/map');
+  }
+
+  /// Navigate to filter screen
+  static void navigateToFilter(BuildContext context) {
+    context.go('/filter');
+  }
+
+  /// Navigate to OTP screen
+  static void navigateToOTP(
+    BuildContext context,
+    String phoneNumber, {
+    bool isSignup = false,
+  }) {
+    context.goNamed(
+      AppConstants.otpRoute,
+      extra: {
+        'phoneNumber': phoneNumber,
+        'isSignup': isSignup,
+      },
+    );
   }
 
   /// Show loading dialog
@@ -278,69 +381,16 @@ class NavigationService {
   }) {
     showDialog(
       context: context,
-      barrierDismissible: false,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E7D32).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(50),
-                  ),
-                  child: const Icon(
-                    Icons.check_circle_rounded,
-                    size: 48,
-                    color: Color(0xFF2E7D32),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF2E3A59),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  message,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      onOkPressed?.call();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E7D32),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'OK',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: onOkPressed ?? () => Navigator.of(context).pop(),
+            child: const Text('OK'),
           ),
+        ],
+      ),
     );
   }
 
@@ -355,51 +405,382 @@ class NavigationService {
   }) async {
     final result = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(cancelText),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: isDestructive
+                ? TextButton.styleFrom(foregroundColor: Colors.red)
+                : null,
+            child: Text(confirmText),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  /// Show snackbar
+  static void showSnackBar({
+    required BuildContext context,
+    required String message,
+    bool isError = false,
+  }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+}
+
+/// Updated Splash Screen with GoRouter integration
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
+  late Animation<double> _textOpacityAnimation;
+  late Animation<double> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupAnimations();
+    _configureSystemUI();
+    _checkAuthAndNavigate();
+  }
+
+  void _configureSystemUI() {
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: AppTheme.emeraldGreen,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+    );
+  }
+
+  void _setupAnimations() {
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 2500),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.5, curve: Curves.elasticOut),
+      ),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeIn),
+      ),
+    );
+
+    _textOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.4, 0.7, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation = Tween<double>(begin: 20.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.4, 0.7, curve: Curves.easeOut),
+      ),
+    );
+
+    _animationController.forward();
+  }
+
+  void _checkAuthAndNavigate() async {
+    // Wait for splash duration
+    await Future.delayed(AppConstants.splashDuration);
+
+    if (mounted) {
+      // Navigate to home using GoRouter
+      NavigationService.navigateFromSplashToHome(context);
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppTheme.emeraldGreen, AppTheme.secondaryGreen],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Animated Logo
+                    Transform.scale(
+                      scale: _scaleAnimation.value,
+                      child: FadeTransition(
+                        opacity: _opacityAnimation,
+                        child: Container(
+                          padding: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 30,
+                                offset: const Offset(0, 15),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // App Icon
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.emeraldGreen,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: const Icon(
+                                  Icons.home_work_rounded,
+                                  color: Colors.white,
+                                  size: 48,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+
+                              // App Name
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'NEARBY',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium
+                                        ?.copyWith(
+                                          color: AppTheme.emeraldGreen,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 1.2,
+                                        ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.emeraldGreen,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      'PG',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // Tagline
+                    FadeTransition(
+                      opacity: _textOpacityAnimation,
+                      child: Transform.translate(
+                        offset: Offset(0, _slideAnimation.value),
+                        child: Text(
+                          'Find Your Perfect PG',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Subtitle
+                    FadeTransition(
+                      opacity: _textOpacityAnimation,
+                      child: Transform.translate(
+                        offset: Offset(0, _slideAnimation.value),
+                        child: Text(
+                          'Premium PG Discovery Platform',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyLarge
+                              ?.copyWith(color: Colors.white.withOpacity(0.8)),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 60),
+
+                    // Loading indicator
+                    FadeTransition(
+                      opacity: _textOpacityAnimation,
+                      child: const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        strokeWidth: 3,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
-            title: Text(
-              title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Updated Main Navigation Wrapper to work with GoRouter
+class MainNavigationWrapper extends StatelessWidget {
+  final Widget child;
+  final int currentIndex;
+  final ValueChanged<int> onTabTapped;
+
+  const MainNavigationWrapper({
+    super.key,
+    required this.child,
+    required this.currentIndex,
+    required this.onTabTapped,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
             ),
-            content: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium,
+          ],
+        ),
+        child: SafeArea(
+          child: BottomNavigationBar(
+            currentIndex: currentIndex,
+            onTap: onTabTapped,
+            selectedItemColor: AppTheme.emeraldGreen,
+            unselectedItemColor: AppTheme.gray600,
+            type: BottomNavigationBarType.fixed,
+            elevation: 0,
+            backgroundColor: Colors.white,
+            selectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(
-                  cancelText,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 12,
+            ),
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home),
+                label: 'Home',
               ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      isDestructive ? Colors.red : const Color(0xFF2E7D32),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  confirmText,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.search_outlined),
+                activeIcon: Icon(Icons.search),
+                label: 'Search',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.local_offer_outlined),
+                activeIcon: Icon(Icons.local_offer),
+                label: 'Offers',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline),
+                activeIcon: Icon(Icons.person),
+                label: 'Profile',
               ),
             ],
           ),
+        ),
+      ),
     );
-    return result ?? false;
+  }
+}
+
+/// Observer for tracking route changes
+class GoRouterObserver extends NavigatorObserver {
+  final void Function(GoRouterState? state)? onChanged;
+
+  GoRouterObserver({this.onChanged});
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    if (route.settings is GoRouteData) {
+      onChanged?.call(null);
+    }
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    if (previousRoute?.settings is GoRouteData) {
+      onChanged?.call(null);
+    }
   }
 }
 
@@ -450,16 +831,17 @@ class LoadingDialog extends StatelessWidget {
             Text(
               'Please wait...',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF2E3A59),
-              ),
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF2E3A59),
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               'We\'re processing your request',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
           ],
@@ -469,180 +851,7 @@ class LoadingDialog extends StatelessWidget {
   }
 }
 
-/// Enhanced Error screen widget
-class ErrorScreen extends StatelessWidget {
-  final String error;
-
-  const ErrorScreen({super.key, required this.error});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: const Text('Error'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF2E7D32),
-        elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: Colors.grey[200]),
-        ),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(60),
-                ),
-                child: const Icon(
-                  Icons.error_outline_rounded,
-                  size: 64,
-                  color: Colors.red,
-                ),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                'Oops! Something went wrong',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF2E3A59),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                error,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.grey[600],
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF2E7D32),
-                      side: const BorderSide(color: Color(0xFF2E7D32)),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    icon: const Icon(Icons.arrow_back_rounded),
-                    label: const Text('Go Back'),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      // Refresh the current route
-                      Navigator.of(context).pushReplacementNamed(
-                        ModalRoute.of(context)?.settings.name ?? '/',
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E7D32),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Extension methods for easier navigation
-extension NavigationExtension on BuildContext {
-  /// Navigate to a route
-  void navigateTo(String routeName, {Object? arguments}) {
-    NavigationService.navigateTo(routeName, arguments: arguments);
-  }
-
-  /// Push a route
-  void pushTo(String routeName, {Object? arguments}) {
-    NavigationService.pushTo(routeName, arguments: arguments);
-  }
-
-  /// Go back
-  void goBack() {
-    NavigationService.goBack();
-  }
-
-  /// Show snackbar
-  void showSnackBar(String message, {bool isError = false}) {
-    NavigationService.showSnackBar(
-      context: this,
-      message: message,
-      isError: isError,
-    );
-  }
-
-  /// Show loading
-  void showLoading() {
-    NavigationService.showLoadingDialog(this);
-  }
-
-  /// Hide loading
-  void hideLoading() {
-    NavigationService.hideLoadingDialog(this);
-  }
-
-  /// Show success dialog
-  void showSuccess(String title, String message, {VoidCallback? onOk}) {
-    NavigationService.showSuccessDialog(
-      context: this,
-      title: title,
-      message: message,
-      onOkPressed: onOk,
-    );
-  }
-
-  /// Show confirmation dialog
-  Future<bool> showConfirmation(
-    String title,
-    String message, {
-    String confirmText = 'Confirm',
-    String cancelText = 'Cancel',
-    bool isDestructive = false,
-  }) {
-    return NavigationService.showConfirmationDialog(
-      context: this,
-      title: title,
-      message: message,
-      confirmText: confirmText,
-      cancelText: cancelText,
-      isDestructive: isDestructive,
-    );
-  }
-}
-
-// Enhanced placeholder screens with consistent theming
+// Placeholder screens (keeping the same as before)
 class PGDetailScreen extends StatelessWidget {
   final String pgId;
 
@@ -657,48 +866,18 @@ class PGDetailScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF2E7D32),
         elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: Colors.grey[200]),
-        ),
       ),
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2E7D32).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(60),
-                ),
-                child: const Icon(
-                  Icons.home_work_rounded,
-                  size: 64,
-                  color: Color(0xFF2E7D32),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'PG Details',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF2E3A59),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text('PG ID: $pgId'),
-              const SizedBox(height: 8),
-              Text(
-                'Detailed view coming soon!',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.home_work_rounded,
+                size: 64, color: Color(0xFF2E7D32)),
+            const SizedBox(height: 16),
+            Text('PG Details for ID: $pgId'),
+            const SizedBox(height: 8),
+            Text('Detailed view coming soon!'),
+          ],
         ),
       ),
     );
@@ -719,48 +898,18 @@ class BookingScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF2E7D32),
         elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: Colors.grey[200]),
-        ),
       ),
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2E7D32).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(60),
-                ),
-                child: const Icon(
-                  Icons.book_online_rounded,
-                  size: 64,
-                  color: Color(0xFF2E7D32),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Book PG',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF2E3A59),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text('Booking for PG: $pgId'),
-              const SizedBox(height: 8),
-              Text(
-                'Booking flow coming soon!',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.book_online_rounded,
+                size: 64, color: Color(0xFF2E7D32)),
+            const SizedBox(height: 16),
+            Text('Booking for PG: $pgId'),
+            const SizedBox(height: 8),
+            Text('Booking flow coming soon!'),
+          ],
         ),
       ),
     );
@@ -779,22 +928,15 @@ class SettingsScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF2E7D32),
         elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: Colors.grey[200]),
-        ),
       ),
       body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.settings_rounded, size: 64, color: Color(0xFF2E7D32)),
-              SizedBox(height: 16),
-              Text('Settings screen coming soon!'),
-            ],
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.settings_rounded, size: 64, color: Color(0xFF2E7D32)),
+            SizedBox(height: 16),
+            Text('Settings screen coming soon!'),
+          ],
         ),
       ),
     );
@@ -813,22 +955,15 @@ class WishlistScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF2E7D32),
         elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: Colors.grey[200]),
-        ),
       ),
       body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.favorite_rounded, size: 64, color: Colors.red),
-              SizedBox(height: 16),
-              Text('Wishlist screen coming soon!'),
-            ],
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.favorite_rounded, size: 64, color: Colors.red),
+            SizedBox(height: 16),
+            Text('Wishlist screen coming soon!'),
+          ],
         ),
       ),
     );
@@ -847,22 +982,15 @@ class MapViewScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF2E7D32),
         elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: Colors.grey[200]),
-        ),
       ),
       body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.map_rounded, size: 64, color: Color(0xFF2E7D32)),
-              SizedBox(height: 16),
-              Text('Map view coming soon!'),
-            ],
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.map_rounded, size: 64, color: Color(0xFF2E7D32)),
+            SizedBox(height: 16),
+            Text('Map view coming soon!'),
+          ],
         ),
       ),
     );
@@ -881,28 +1009,107 @@ class FilterScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF2E7D32),
         elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: Colors.grey[200]),
-        ),
       ),
       body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.filter_list_rounded,
-                size: 64,
-                color: Color(0xFF2E7D32),
-              ),
-              SizedBox(height: 16),
-              Text('Advanced filters coming soon!'),
-            ],
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.filter_list_rounded, size: 64, color: Color(0xFF2E7D32)),
+            SizedBox(height: 16),
+            Text('Advanced filters coming soon!'),
+          ],
         ),
       ),
+    );
+  }
+}
+
+class OTPScreen extends StatelessWidget {
+  final String phoneNumber;
+  final bool isSignup;
+
+  const OTPScreen({
+    super.key,
+    required this.phoneNumber,
+    required this.isSignup,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      appBar: AppBar(
+        title: const Text('Verify OTP'),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF2E7D32),
+        elevation: 0,
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.sms_rounded, size: 64, color: Color(0xFF2E7D32)),
+            const SizedBox(height: 16),
+            Text('OTP sent to +91 $phoneNumber'),
+            const SizedBox(height: 8),
+            Text('OTP verification coming soon!'),
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () => context.go('/'),
+              child: const Text('Skip for now'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Extension methods for easier navigation
+extension NavigationExtension on BuildContext {
+  void navigateTo(String routeName, {Object? arguments}) {
+    goNamed(routeName, extra: arguments);
+  }
+
+  void showSnackBar(String message, {bool isError = false}) {
+    NavigationService.showSnackBar(
+      context: this,
+      message: message,
+      isError: isError,
+    );
+  }
+
+  void showLoading() {
+    NavigationService.showLoadingDialog(this);
+  }
+
+  void hideLoading() {
+    NavigationService.hideLoadingDialog(this);
+  }
+
+  void showSuccess(String title, String message, {VoidCallback? onOk}) {
+    NavigationService.showSuccessDialog(
+      context: this,
+      title: title,
+      message: message,
+      onOkPressed: onOk,
+    );
+  }
+
+  Future<bool> showConfirmation(
+    String title,
+    String message, {
+    String confirmText = 'Confirm',
+    String cancelText = 'Cancel',
+    bool isDestructive = false,
+  }) {
+    return NavigationService.showConfirmationDialog(
+      context: this,
+      title: title,
+      message: message,
+      confirmText: confirmText,
+      cancelText: cancelText,
+      isDestructive: isDestructive,
     );
   }
 }

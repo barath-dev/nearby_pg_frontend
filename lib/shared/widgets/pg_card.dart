@@ -1,67 +1,240 @@
 // lib/shared/widgets/pg_card.dart
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../models/app_models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
+import '../../features/profile/providers/profile_provider.dart';
+import '../../features/search/providers/search_provider.dart';
 
-/// Variant types for PG card display
+/// PG Card variants for different layouts
 enum PGCardVariant {
-  /// Standard card with basic info
-  standard,
+  /// Regular full-width card
+  regular,
 
-  /// Compact card for horizontal lists
-  compact,
-
-  /// Detailed card with more information
-  detailed,
-
-  /// Map card for displaying in map callouts
-  map,
+  /// Compact card for horizontal scrolling
+  compact
 }
 
-/// Reusable PG card widget with different variants
 class PGCard extends StatelessWidget {
   final PGProperty pgProperty;
-  final VoidCallback? onTap;
-  final VoidCallback? onWishlistTap;
-  final VoidCallback? onContactTap;
+  final PGCardVariant variant;
+  final Function()? onTap;
+  final Function()? onWishlistTap;
   final bool isWishlisted;
   final bool showDistance;
-  final double? distance;
-  final PGCardVariant variant;
 
   const PGCard({
     super.key,
     required this.pgProperty,
+    this.variant = PGCardVariant.regular,
     this.onTap,
     this.onWishlistTap,
-    this.onContactTap,
     this.isWishlisted = false,
-    this.showDistance = false,
-    this.distance,
-    this.variant = PGCardVariant.standard,
+    this.showDistance = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (variant == PGCardVariant.compact) {
+      return _buildCompactCard(context);
+    } else {
+      return _buildRegularCard(context);
+    }
+  }
+
+  Widget _buildRegularCard(BuildContext context) {
     return Card(
-      elevation: AppTheme.elevationSm,
-      clipBehavior: Clip.antiAlias,
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.grey.shade200,
+          width: 1,
+        ),
+      ),
+      margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildImageSection(context),
+            // Image section
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(12)),
+                  child: _buildImage(height: 180),
+                ),
+                _buildLabels(),
+                _buildWishlistButton(context),
+              ],
+            ),
+
+            // Content section
             Padding(
               padding: const EdgeInsets.all(12),
-              child: _buildContentSection(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // PG Name and rating
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          pgProperty.name,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.deepCharcoal,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      _buildRatingBadge(),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Location
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: AppTheme.gray600,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          pgProperty.address,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.gray700,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (showDistance) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          _getDistanceText(),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.gray600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Amenities
+                  SizedBox(
+                    height: 26,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: pgProperty.amenities.length.clamp(0, 4),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        if (index == 3 && pgProperty.amenities.length > 4) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.emeraldGreen.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Text(
+                              '+${pgProperty.amenities.length - 3}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.emeraldGreen,
+                              ),
+                            ),
+                          );
+                        }
+
+                        final amenity = pgProperty.amenities[index];
+                        return _buildAmenityChip(amenity);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Price and details
+                  Row(
+                    children: [
+                      // Price
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                '₹${pgProperty.price.toInt()}',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.deepCharcoal,
+                                ),
+                              ),
+                              const Text(
+                                '/month',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.gray700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (pgProperty.securityDeposit > 0)
+                            Text(
+                              'Security: ₹${pgProperty.securityDeposit.toInt()}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.gray600,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const Spacer(),
+
+                      // Details button
+                      ElevatedButton(
+                        onPressed: onTap,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.emeraldGreen,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'View Details',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -69,443 +242,691 @@ class PGCard extends StatelessWidget {
     );
   }
 
-  Widget _buildImageSection(BuildContext context) {
-    return Stack(
-      children: [
-        // Image
-        SizedBox(
-          height: variant == PGCardVariant.compact ? 120 : 180,
-          width: double.infinity,
-          child: pgProperty.images.isNotEmpty
-              ? CachedNetworkImage(
-                  imageUrl: pgProperty.images.first,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => _buildImagePlaceholder(),
-                  errorWidget: (context, url, error) => _buildImageError(),
-                )
-              : _buildImagePlaceholder(),
+  Widget _buildCompactCard(BuildContext context) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.grey.shade200,
+          width: 1,
         ),
-
-        // Tags
-        Positioned(
-          top: 12,
-          left: 12,
-          child: Row(
-            children: [
-              if (pgProperty.isVerified)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.emeraldGreen,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.verified, color: Colors.white, size: 12),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Verified',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (pgProperty.isVerified && pgProperty.isFeatured)
-                const SizedBox(width: 8),
-              if (pgProperty.isFeatured)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.warmYellow,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.star, color: Colors.black87, size: 12),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Featured',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Colors.black87,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-
-        // Wishlist button
-        if (onWishlistTap != null)
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                icon: Icon(
-                  isWishlisted ? Icons.favorite : Icons.favorite_border,
-                  color: isWishlisted ? Colors.red : Colors.grey,
-                ),
-                onPressed: onWishlistTap,
-                constraints: const BoxConstraints.tightFor(
-                  width: 36,
-                  height: 36,
-                ),
-                padding: EdgeInsets.zero,
-                iconSize: 20,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildContentSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Name and price row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Name with gender indicator
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    pgProperty.name,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      _buildGenderIndicator(context),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Price
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppTheme.emeraldGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                '₹${pgProperty.price.toStringAsFixed(0)}/mo',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: AppTheme.emeraldGreen,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 8),
-
-        // Address
-        Text(
-          pgProperty.address,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-
-        const SizedBox(height: 12),
-
-        // Rating and distance
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Rating
-            Row(
+            // Image
+            Stack(
               children: [
-                RatingBar.builder(
-                  initialRating: pgProperty.rating,
-                  minRating: 0,
-                  direction: Axis.horizontal,
-                  allowHalfRating: true,
-                  itemCount: 5,
-                  itemSize: 16,
-                  ignoreGestures: true,
-                  itemBuilder: (context, _) =>
-                      const Icon(Icons.star, color: Colors.amber),
-                  onRatingUpdate: (rating) {},
+                ClipRRect(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(12)),
+                  child: _buildImage(height: 120),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  '(${pgProperty.reviewCount})',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                ),
+                _buildCompactLabels(),
+                _buildWishlistButton(context, isCompact: true),
               ],
             ),
 
-            // Distance
-            if (showDistance && distance != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
+            // Content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.location_on, size: 12, color: Colors.grey),
-                    const SizedBox(width: 2),
-                    Text(
-                      '${distance!.toStringAsFixed(1)} km',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
+                    // Name and ratings
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            pgProperty.name,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.deepCharcoal,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          '${pgProperty.rating}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.gray700,
+                          ),
+                        ),
+                        const Icon(
+                          Icons.star,
+                          color: Colors.amber,
+                          size: 14,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+
+                    // Location
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 12,
+                          color: AppTheme.gray600,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            pgProperty.address,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.gray700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+
+                    // Price row - WITH OVERFLOW FIX
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '₹${pgProperty.price.toInt()}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.deepCharcoal,
+                          ),
+                        ),
+                        // Wrap the inner Row with Flexible to prevent overflow
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min, // Use minimum space
+                            children: [
+                              const Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                                size: 16,
+                              ),
+                              Text(
+                                ' ${pgProperty.rating}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: AppTheme.gray700,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Flexible(
+                                child: Text(
+                                  ' (${pgProperty.reviewCount})',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.gray600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
+            ),
           ],
         ),
-
-        // Amenities (for detailed variant only)
-        if (variant == PGCardVariant.detailed) ...[
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: pgProperty.amenities.take(4).map((amenity) {
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  amenity,
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-
-        // Contact button (for detailed variant only)
-        if (variant == PGCardVariant.detailed && onContactTap != null) ...[
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: onContactTap,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.emeraldGreen,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              minimumSize: const Size(double.infinity, 36),
-            ),
-            child: const Text('Contact'),
-          ),
-        ],
-      ],
+      ),
     );
   }
 
-  Widget _buildGenderIndicator(BuildContext context) {
-    Color color;
-    IconData icon;
-    String text;
+  Widget _buildImage({required double height}) {
+    if (pgProperty.images.isEmpty) {
+      return Container(
+        height: height,
+        color: Colors.grey[300],
+        child: Center(
+          child: Icon(
+            Icons.image_not_supported_outlined,
+            color: Colors.grey[500],
+            size: 32,
+          ),
+        ),
+      );
+    }
 
-    switch (pgProperty.genderPreference) {
-      case 'MALE':
-        color = Colors.blue;
-        icon = Icons.male;
-        text = 'Male';
-        break;
-      case 'FEMALE':
-        color = Colors.pink;
-        icon = Icons.female;
-        text = 'Female';
-        break;
-      case 'ANY':
-      default:
-        color = Colors.purple;
-        icon = Icons.people;
-        text = 'Any';
-        break;
+    return CachedNetworkImage(
+      imageUrl: pgProperty.images.first,
+      height: height,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      placeholder: (context, url) => Container(
+        color: Colors.grey[300],
+        child: const Center(
+          child: CircularProgressIndicator(
+            color: AppTheme.emeraldGreen,
+            strokeWidth: 2,
+          ),
+        ),
+      ),
+      errorWidget: (context, url, error) => Container(
+        color: Colors.grey[300],
+        child: Center(
+          child: Icon(
+            Icons.image_not_supported_outlined,
+            color: Colors.grey[500],
+            size: 32,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLabels() {
+    return Positioned(
+      top: 12,
+      left: 12,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (pgProperty.isVerified)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.blue,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.verified_outlined,
+                    color: Colors.white,
+                    size: 12,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'VERIFIED',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (pgProperty.genderPreference != 'ANY')
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: _getGenderColor(pgProperty.genderPreference),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                _getGenderText(pgProperty.genderPreference),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactLabels() {
+    final labels = <Widget>[];
+
+    if (pgProperty.isVerified) {
+      labels.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.blue,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Text(
+            'VERIFIED',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 8,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (pgProperty.genderPreference != 'ANY') {
+      labels.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: _getGenderColor(pgProperty.genderPreference),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            _getGenderText(pgProperty.genderPreference),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 8,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (labels.isEmpty) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 8,
+      left: 8,
+      child: Row(
+        children: [
+          for (int i = 0; i < labels.length; i++) ...[
+            if (i > 0) const SizedBox(width: 4),
+            labels[i],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWishlistButton(BuildContext context, {bool isCompact = false}) {
+    return Positioned(
+      top: isCompact ? 8 : 12,
+      right: isCompact ? 8 : 12,
+      child: GestureDetector(
+        onTap: onWishlistTap,
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(
+            isWishlisted ? Icons.favorite : Icons.favorite_border,
+            color: isWishlisted ? Colors.red : AppTheme.gray400,
+            size: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRatingBadge() {
+    if (pgProperty.rating == 0) {
+      return const SizedBox.shrink();
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: _getRatingColor(pgProperty.rating),
         borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.star,
+            color: Colors.white,
+            size: 12,
+          ),
+          Text(
+            ' ${pgProperty.rating}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAmenityChip(String amenity) {
+    IconData icon;
+    String label;
+
+    switch (amenity.toUpperCase()) {
+      case 'WIFI':
+        icon = Icons.wifi;
+        label = 'WiFi';
+        break;
+      case 'AC':
+        icon = Icons.ac_unit;
+        label = 'AC';
+        break;
+      case 'MEALS':
+        icon = Icons.restaurant;
+        label = 'Meals';
+        break;
+      case 'PARKING':
+        icon = Icons.local_parking;
+        label = 'Parking';
+        break;
+      case 'GYM':
+        icon = Icons.fitness_center;
+        label = 'Gym';
+        break;
+      case 'LAUNDRY':
+        icon = Icons.local_laundry_service;
+        label = 'Laundry';
+        break;
+      case 'RECREATION_ROOM':
+        icon = Icons.sports_esports;
+        label = 'Rec Room';
+        break;
+      case 'SECURITY':
+        icon = Icons.security;
+        label = 'Security';
+        break;
+      default:
+        icon = Icons.check_circle;
+        label = amenity;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.emeraldGreen.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(30),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color),
+          Icon(
+            icon,
+            size: 12,
+            color: AppTheme.emeraldGreen,
+          ),
           const SizedBox(width: 4),
           Text(
-            text,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w500,
-                ),
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppTheme.emeraldGreen,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildImagePlaceholder() {
-    return Container(
-      color: Colors.grey[200],
-      child: Center(
-        child: Icon(Icons.home_work_rounded, color: Colors.grey[400], size: 40),
-      ),
-    );
+  String _getDistanceText() {
+    // In a real app, this would calculate distance based on user's location
+    // For now, just return a placeholder
+    return '2.3 km';
   }
 
-  Widget _buildImageError() {
-    return Container(
-      color: Colors.grey[200],
-      child: Center(
-        child: Icon(
-          Icons.broken_image_rounded,
-          color: Colors.grey[400],
-          size: 40,
-        ),
-      ),
-    );
+  Color _getRatingColor(double rating) {
+    if (rating >= 4.5) return Colors.green[700]!;
+    if (rating >= 4.0) return Colors.green;
+    if (rating >= 3.5) return Colors.lightGreen;
+    if (rating >= 3.0) return Colors.amber;
+    return Colors.orange;
+  }
+
+  Color _getGenderColor(String gender) {
+    switch (gender.toUpperCase()) {
+      case 'MALE':
+        return Colors.blue;
+      case 'FEMALE':
+        return Colors.pink;
+      case 'CO_ED':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getGenderText(String gender) {
+    switch (gender.toUpperCase()) {
+      case 'MALE':
+        return 'MALE ONLY';
+      case 'FEMALE':
+        return 'FEMALE ONLY';
+      case 'CO_ED':
+        return 'CO-ED';
+      default:
+        return 'ANY';
+    }
   }
 }
 
-/// Shimmer loading effect for PG cards
+/// Shimmer loading placeholder for PG Cards
 class PGCardShimmer extends StatelessWidget {
+  /// Card variant (regular or compact)
   final PGCardVariant variant;
 
-  const PGCardShimmer({super.key, this.variant = PGCardVariant.standard});
+  /// Constructor
+  const PGCardShimmer({
+    super.key,
+    this.variant = PGCardVariant.regular,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
       baseColor: Colors.grey[300]!,
       highlightColor: Colors.grey[100]!,
-      child: Card(
-        elevation: 0,
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image placeholder
-            Container(
-              height: variant == PGCardVariant.compact ? 120 : 180,
-              width: double.infinity,
-              color: Colors.white,
-            ),
+      child: variant == PGCardVariant.compact
+          ? _buildCompactShimmer()
+          : _buildRegularShimmer(),
+    );
+  }
 
-            // Content placeholder
-            Padding(
+  Widget _buildRegularShimmer() {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.grey.shade200,
+          width: 1,
+        ),
+      ),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image placeholder
+          Container(
+            height: 180,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+          ),
+
+          // Content placeholder
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title and rating
+                Row(
+                  children: [
+                    Container(
+                      width: 150,
+                      height: 16,
+                      color: Colors.white,
+                    ),
+                    const Spacer(),
+                    Container(
+                      width: 40,
+                      height: 16,
+                      color: Colors.white,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Location
+                Row(
+                  children: [
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Container(
+                      width: 120,
+                      height: 12,
+                      color: Colors.white,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Amenities
+                SizedBox(
+                  height: 26,
+                  child: Row(
+                    children: List.generate(
+                      3,
+                      (index) => Container(
+                        width: 60,
+                        height: 26,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Price and button
+                Row(
+                  children: [
+                    Container(
+                      width: 70,
+                      height: 16,
+                      color: Colors.white,
+                    ),
+                    const Spacer(),
+                    Container(
+                      width: 100,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactShimmer() {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.grey.shade200,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image placeholder
+          Container(
+            height: 120,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+          ),
+
+          // Content placeholder
+          Expanded(
+            child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Name
-                      Container(width: 150, height: 20, color: Colors.white),
-
-                      // Price
-                      Container(width: 80, height: 24, color: Colors.white),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Address
+                  // Title
                   Container(
-                    width: double.infinity,
+                    width: 120,
                     height: 16,
                     color: Colors.white,
                   ),
+                  const SizedBox(height: 8),
 
-                  const SizedBox(height: 12),
-
-                  // Bottom row
+                  // Location
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Rating
-                      Container(width: 100, height: 16, color: Colors.white),
-
-                      // Distance
-                      Container(width: 60, height: 16, color: Colors.white),
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        width: 100,
+                        height: 10,
+                        color: Colors.white,
+                      ),
                     ],
                   ),
+                  const Spacer(),
 
-                  // Extra for detailed variant
-                  if (variant == PGCardVariant.detailed) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: List.generate(4, (index) {
-                        return Container(
-                          width: 60,
-                          height: 24,
-                          margin: const EdgeInsets.only(right: 8),
-                          color: Colors.white,
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      height: 36,
-                      color: Colors.white,
-                    ),
-                  ],
+                  // Price
+                  Container(
+                    width: 70,
+                    height: 16,
+                    color: Colors.white,
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

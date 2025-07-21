@@ -88,6 +88,8 @@ class PGProperty {
   //total rooms
   final int totalRooms;
 
+  final String area;
+
   /// Constructor
   const PGProperty({
     required this.id,
@@ -118,6 +120,7 @@ class PGProperty {
     required this.totalRooms,
     required this.availableRooms,
     this.availableFrom,
+    required this.area,
   });
 
   /// Create from JSON
@@ -125,6 +128,7 @@ class PGProperty {
     return PGProperty(
       id: json['id'] as String,
       name: json['name'] as String,
+      area: json['area'] as String,
       address: json['address'] as String,
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
@@ -182,6 +186,7 @@ class PGProperty {
       'name': name,
       'address': address,
       'latitude': latitude,
+      'area': area,
       'longitude': longitude,
       'price': price,
       'securityDeposit': securityDeposit,
@@ -213,6 +218,7 @@ class PGProperty {
   PGProperty copyWith({
     String? id,
     String? name,
+    String? area,
     String? address,
     double? latitude,
     double? longitude,
@@ -241,6 +247,7 @@ class PGProperty {
   }) {
     return PGProperty(
       id: id ?? this.id,
+      area: area ?? this.area,
       name: name ?? this.name,
       address: address ?? this.address,
       latitude: latitude ?? this.latitude,
@@ -257,7 +264,7 @@ class PGProperty {
       ownerName: ownerName ?? this.ownerName,
       contactPhone: contactPhone ?? this.contactPhone,
       contactEmail: contactEmail ?? this.contactEmail,
-      description: description ?? this.description,
+      description: description ?? description,
       houseRules: houseRules ?? this.houseRules,
       nearbyLandmarks: nearbyLandmarks ?? this.nearbyLandmarks,
       isVerified: isVerified ?? this.isVerified,
@@ -981,6 +988,151 @@ class ProfileStats {
       'wishlistCount': wishlistCount,
       'reviewsCount': reviewsCount,
       'profileCompletion': profileCompletion,
+    };
+  }
+}
+
+// Add these model definitions to lib/shared/models/app_models.dart
+
+/// Offer model
+class Offer {
+  final String id;
+  final String title;
+  final String description;
+  final String imageUrl;
+  final String discountText;
+  final bool isExclusive;
+  final DateTime? expiryDate;
+  final List<String> terms;
+  final String? couponCode;
+
+  const Offer({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.imageUrl,
+    required this.discountText,
+    this.isExclusive = false,
+    this.expiryDate,
+    required this.terms,
+    this.couponCode,
+  });
+
+  /// Create from JSON
+  factory Offer.fromJson(Map<String, dynamic> json) {
+    return Offer(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String,
+      imageUrl: json['imageUrl'] as String,
+      discountText: json['discountText'] as String,
+      isExclusive: json['isExclusive'] as bool? ?? false,
+      expiryDate: json['expiryDate'] != null
+          ? DateTime.parse(json['expiryDate'] as String)
+          : null,
+      terms:
+          (json['terms'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+              [],
+      couponCode: json['couponCode'] as String?,
+    );
+  }
+
+  /// Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'imageUrl': imageUrl,
+      'discountText': discountText,
+      'isExclusive': isExclusive,
+      'expiryDate': expiryDate?.toIso8601String(),
+      'terms': terms,
+      'couponCode': couponCode,
+    };
+  }
+}
+
+/// Coupon model
+class Coupon {
+  final String id;
+  final String code;
+  final String title;
+  final String description;
+  final DateTime? expiryDate;
+  final bool isValid;
+
+  const Coupon({
+    required this.id,
+    required this.code,
+    required this.title,
+    required this.description,
+    this.expiryDate,
+    this.isValid = true,
+  });
+
+  /// Create from JSON
+  factory Coupon.fromJson(Map<String, dynamic> json) {
+    return Coupon(
+      id: json['id'] as String,
+      code: json['code'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String,
+      expiryDate: json['expiryDate'] != null
+          ? DateTime.parse(json['expiryDate'] as String)
+          : null,
+      isValid: json['isValid'] as bool? ?? true,
+    );
+  }
+
+  /// Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'code': code,
+      'title': title,
+      'description': description,
+      'expiryDate': expiryDate?.toIso8601String(),
+      'isValid': isValid,
+    };
+  }
+}
+
+/// Referral model
+class Referral {
+  final String id;
+  final String name;
+  final DateTime joinedDate;
+  final bool isComplete;
+  final double bonusAmount;
+
+  const Referral({
+    required this.id,
+    required this.name,
+    required this.joinedDate,
+    required this.isComplete,
+    required this.bonusAmount,
+  });
+
+  /// Create from JSON
+  factory Referral.fromJson(Map<String, dynamic> json) {
+    return Referral(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      joinedDate: DateTime.parse(json['joinedDate'] as String),
+      isComplete: json['isComplete'] as bool? ?? false,
+      bonusAmount: (json['bonusAmount'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  /// Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'joinedDate': joinedDate.toIso8601String(),
+      'isComplete': isComplete,
+      'bonusAmount': bonusAmount,
     };
   }
 }

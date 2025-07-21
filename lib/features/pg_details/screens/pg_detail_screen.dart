@@ -37,6 +37,7 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
     _pgProperty = PGProperty(
       id: widget.pgId,
       name: 'Green Valley PG',
+      area: 'Sector 18, Noida',
       address: 'Sector 18, Noida, Near City Center Mall',
       latitude: 28.5706,
       longitude: 77.3261,
@@ -143,7 +144,7 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
                 _buildRulesSection(),
                 _buildLocationSection(),
                 _buildOwnerSection(),
-                SizedBox(height: 100), // Space for bottom button
+                const SizedBox(height: 100), // Space for bottom button
               ],
             ),
           ),
@@ -271,10 +272,10 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
                 color: AppTheme.success,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  const Icon(Icons.verified, color: Colors.white, size: 16),
-                  const SizedBox(width: 4),
+                  Icon(Icons.verified, color: Colors.white, size: 16),
+                  SizedBox(width: 4),
                   Text(
                     'Verified',
                     style: TextStyle(
@@ -903,7 +904,7 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.phone,
                             size: 16,
                             color: AppTheme.emeraldGreen,
@@ -1061,7 +1062,7 @@ class _PGDetailScreenState extends State<PGDetailScreen> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppTheme.emeraldGreen,
               fontWeight: FontWeight.w500,
               fontSize: 12,

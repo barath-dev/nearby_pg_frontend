@@ -1,113 +1,114 @@
 // lib/core/constants/app_constants.dart
-import 'package:flutter/material.dart';
 
-/// Application constants and configuration
+
+/// Application-wide constants
 class AppConstants {
-  // App Info
-  static const String appName = 'NEARBY PG';
-  static const String appTagline = 'Find Your Perfect PG';
-  static const String appDescription = 'Premium PG Discovery Platform';
-  static const String appVersion = '1.0.0';
-
-  // Route Constants
-  static const String splashRoute = '/';
-  static const String onboardingRoute = '/onboarding';
-  static const String loginRoute = '/login';
-  static const String signupRoute = '/signup';
-  static const String otpRoute = '/otp';
-  static const String homeRoute = '/home';
-  static const String searchRoute = '/search';
-  static const String pgDetailRoute = '/pg-detail';
-  static const String bookingRoute = '/booking';
-  static const String profileRoute = '/profile';
-  static const String offersRoute = '/offers';
-  static const String settingsRoute = '/settings';
-  static const String wishlistRoute = '/wishlist';
-  static const String mapViewRoute = '/map-view';
-  static const String filterRoute = '/filter';
-
-  // API Constants
+  // API configuration
   static const String baseUrl = 'https://api.nearbypg.com/v1';
-  static const Duration connectTimeout = Duration(seconds: 15);
-  static const Duration receiveTimeout = Duration(seconds: 15);
-  static const String apiKey = 'YOUR_API_KEY';
+  static const Duration connectTimeout = Duration(seconds: 30);
+  static const Duration receiveTimeout = Duration(seconds: 30);
 
-  // Endpoint Constants
-  static const String pgListEndpoint = '/pg/list';
-  static const String pgDetailEndpoint = '/pg/detail';
-  static const String featuredPGsEndpoint = '/pg/featured';
-  static const String nearbyPGsEndpoint = '/pg/nearby';
-  static const String searchPGsEndpoint = '/pg/search';
-  static const String bannersEndpoint = '/banners';
-  static const String bookingEndpoint = '/booking';
-  static const String bookingHistoryEndpoint = '/booking/history';
-  static const String userProfileEndpoint = '/user/profile';
-  static const String wishlistEndpoint = '/user/wishlist';
-  static const String authLoginEndpoint = '/auth/login';
-  static const String authVerifyOTPEndpoint = '/auth/verify-otp';
-  static const String authSignupEndpoint = '/auth/signup';
-  static String editProfileRoute = '/edit-profile';
+  // Feature flags
+  static const bool isDevelopment = true;
+  static const bool enableAnalytics = true;
 
-  // Splash Screen
-  static const Duration splashDuration = Duration(seconds: 2);
-
-  // Local Storage Keys
-  static const String userPreferencesBox = 'user_preferences';
-  static const String cacheBox = 'cache_box';
-  static const String searchHistoryBox = 'search_history';
-  static const String bookingCacheBox = 'booking_cache';
-
-  // Cache Configuration
-  static const Duration pgCacheValidityDuration = Duration(hours: 1);
-  static const Duration bannersValidityDuration = Duration(hours: 12);
-  static const Duration locationValidityDuration = Duration(minutes: 30);
+  // Cache configuration
+  static const Duration shortCacheExpiry = Duration(minutes: 30);
+  static const Duration longCacheExpiry = Duration(days: 7);
   static const int maxRecentSearches = 10;
+  static const int maxSearchSuggestions = 8;
 
-  // Location Configuration
-  static const double defaultSearchRadius = 5.0; // in kilometers
-  static const double maxSearchRadius = 20.0; // in kilometers
+  // Pagination
+  static const int defaultPageSize = 10;
 
-  // UI Configuration
-  static const double cardBorderRadius = 12.0;
-  static const double buttonBorderRadius = 8.0;
-  static const double pillBorderRadius = 20.0;
-  static const EdgeInsets defaultPadding = EdgeInsets.all(16.0);
-  static const double defaultSpacing = 16.0;
+  // Search configuration
+  static const Duration debounceDelay = Duration(milliseconds: 500);
 
-  // Feature Flags
-  static const bool enableLocationFeatures = true;
-  static const bool enableOfflineMode = true;
-  static const bool enableBookingFeature = true;
-  static const bool enableNotifications = true;
-  static const bool enableRatingFeature = true;
-  static const bool enableWishlistFeature = true;
-  static const bool enableChatFeature = false; // Future feature
-  static const bool enableVideoCallFeature = false; // Future feature
+  // Map configuration
+  static const double defaultMapZoom = 14.0;
+  static const double defaultLatitude = 28.6139;
+  static const double defaultLongitude = 77.2090;
 
-  static const double minBudgetRange = 1000;
-  static const double maxBudgetRange = 50000;
-  static const double budgetStep = 500;
+  // App routes
+  static const String homeRoute = 'home';
+  static const String searchRoute = 'search';
+  static const String offersRoute = 'offers';
+  static const String profileRoute = 'profile';
+  static const String pgDetailRoute = 'pgDetail';
+  static const String loginRoute = 'login';
+  static const String signupRoute = 'signup';
+  static const String onboardingRoute = 'onboarding';
+  static const String splashRoute = 'splash';
 
-  // Environment Configuration
-  static const String environment = String.fromEnvironment(
-    'ENVIRONMENT',
-    defaultValue: 'development',
-  );
+  // Default values
+  static const double defaultRatingValue = 0.0;
+  static const int defaultReviewCount = 0;
+  static const List<String> defaultAmenities = [];
+  static const List<String> defaultRoomTypes = ['SINGLE', 'DOUBLE', 'TRIPLE'];
+  static const List<String> defaultGenderOptions = [
+    'MALE',
+    'FEMALE',
+    'CO_ED',
+    'ANY'
+  ];
+  static const List<String> defaultOccupationTypes = [
+    'STUDENT',
+    'PROFESSIONAL',
+    'ANY'
+  ];
+  static const List<String> defaultSortOptions = [
+    'distance',
+    'price',
+    'rating',
+    'newest'
+  ];
 
-  static var shortCacheExpiry = const Duration(minutes: 30);
-  static var mediumCacheExpiry = const Duration(hours: 6);
-  static var longCacheExpiry = const Duration(days: 1);
+  // Error messages
+  static const String genericErrorMessage =
+      'Something went wrong. Please try again.';
+  static const String networkErrorMessage =
+      'Network error. Please check your connection.';
+  static const String locationPermissionDeniedMessage =
+      'Location permission denied. Some features may not work properly.';
 
-  static num defaultPageSize = 20;
+  // UI Constants
+  static const double defaultPadding = 16.0;
+  static const double defaultMargin = 16.0;
+  static const double defaultRadius = 12.0;
+  static const double cardElevation = 2.0;
+  static const double buttonHeight = 56.0;
+  static const double iconSize = 24.0;
+  static const double smallIconSize = 16.0;
 
-  static Duration debounceDelay = const Duration(milliseconds: 300);
+  // Animation durations
+  static const Duration defaultAnimationDuration = Duration(milliseconds: 300);
+  static const Duration longAnimationDuration = Duration(milliseconds: 500);
 
-  static bool get isProduction => environment == 'production';
-  static bool get isDevelopment => environment == 'development';
-  static bool get isStaging => environment == 'staging';
+  // App-specific constants
+  static const int minBookingDuration = 30; // days
+  static const double minSecurityDeposit = 1000.0;
+  static const double maxSecurityDeposit = 50000.0;
+  static const double defaultReferralBonus = 500.0;
 
-  // Prevent instantiation
-  AppConstants._();
+  // Pricing constants
+  static const double minPrice = 1000.0;
+  static const double maxPrice = 50000.0;
+  static const double defaultMinPrice = 5000.0;
+  static const double defaultMaxPrice = 15000.0;
+
+  // Filter constants
+  static const double maxFilterDistance = 10.0; // km
+  static const double defaultFilterDistance = 5.0;
+
+  static var minBudgetRange = 1000.0;
+
+  static var maxBudgetRange = 30000.0;
+
+  static var maxSearchRadius = 20.0;
+
+  static Duration splashDuration = const Duration(seconds: 2);
+
+  static String otpRoute = '/otp';
 }
 
 /// String constants for localization keys

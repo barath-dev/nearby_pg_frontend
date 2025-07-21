@@ -119,20 +119,20 @@ class AppTheme {
 
       // Checkbox theme
       checkboxTheme: CheckboxThemeData(
-        fillColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return emeraldGreen;
           }
           return Colors.transparent;
         }),
-        checkColor: MaterialStateProperty.all(white),
+        checkColor: WidgetStateProperty.all(white),
         side: const BorderSide(color: gray400, width: 2),
       ),
 
       // Radio theme
       radioTheme: RadioThemeData(
-        fillColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return emeraldGreen;
           }
           return gray400;
@@ -353,11 +353,11 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         textStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
       ).copyWith(
-        backgroundColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.disabled)) {
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
             return gray300;
           }
-          if (states.contains(MaterialState.pressed)) {
+          if (states.contains(WidgetState.pressed)) {
             return emeraldGreen.withOpacity(0.8);
           }
           return emeraldGreen;

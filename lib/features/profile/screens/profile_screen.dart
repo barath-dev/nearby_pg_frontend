@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
@@ -784,14 +785,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     // Book button
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
-                          // Navigate to booking
-                          Navigator.pushNamed(
-                            context,
-                            AppConstants.bookingRoute,
-                            arguments: pg.id,
-                          );
-                        },
+                        onPressed: () {},
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.emeraldGreen,
                           foregroundColor: Colors.white,
@@ -865,7 +859,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
-              Navigator.pushNamed(context, AppConstants.loginRoute);
+              context.goNamed(AppConstants.loginRoute);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.emeraldGreen,
@@ -902,14 +896,14 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildLoadingState() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(
+          CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(AppTheme.emeraldGreen),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             'Loading profile...',
             style: TextStyle(color: AppTheme.gray600),

@@ -1,6 +1,5 @@
 // lib/features/profile/providers/profile_provider.dart
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -29,7 +28,7 @@ class ProfileProvider extends ChangeNotifier {
   List<PGProperty> _wishlistPGs = [];
 
   // Profile statistics
-  ProfileStats _profileStats = ProfileStats();
+  ProfileStats _profileStats = const ProfileStats();
 
   // Settings
   AppSettings _appSettings = const AppSettings();
@@ -56,7 +55,7 @@ class ProfileProvider extends ChangeNotifier {
 
   bool get isAuthenticated => _apiService.isAuthenticated;
   bool get hasProfile => _userProfile != null;
-  bool get isProfileComplete => _userProfile != null;
+  bool get isProfileComplete => _userProfile?.isProfileComplete ?? false;
 
   /// Initialize profile data
   Future<void> initialize() async {
@@ -173,6 +172,7 @@ class ProfileProvider extends ChangeNotifier {
     _wishlistPGs = [
       PGProperty(
         id: 'pg123',
+        area: 'Sector 18, Noida',
         name: 'Green Valley PG',
         address: 'Sector 18, Noida',
         latitude: 28.5706,
@@ -204,6 +204,7 @@ class ProfileProvider extends ChangeNotifier {
       PGProperty(
         id: 'pg456',
         name: 'Comfort PG',
+        area: 'Sector 62, Noida',
         address: 'Sector 62, Noida',
         latitude: 28.6280,
         totalRooms: 1,
@@ -295,6 +296,7 @@ class ProfileProvider extends ChangeNotifier {
         locationTrackingEnabled: true,
         emailNotificationsEnabled: true,
         smsNotificationsEnabled: false,
+        language: 'en',
       );
 
       notifyListeners();
@@ -400,6 +402,7 @@ class ProfileProvider extends ChangeNotifier {
       PGProperty(
         id: 'pg123',
         name: 'Green Valley PG',
+        area: 'Sector 18, Noida',
         address: 'Sector 18, Noida',
         latitude: 28.5706,
         longitude: 77.3261,
@@ -430,6 +433,7 @@ class ProfileProvider extends ChangeNotifier {
       PGProperty(
         id: 'pg456',
         name: 'Comfort PG',
+        area: 'Sector 62, Noida',
         address: 'Sector 62, Noida',
         latitude: 28.6280,
         longitude: 77.3649,
@@ -460,6 +464,7 @@ class ProfileProvider extends ChangeNotifier {
       PGProperty(
         id: 'pg789',
         name: 'Luxury PG',
+        area: 'Sector 50, Noida',
         address: 'Sector 50, Noida',
         latitude: 28.5735,
         longitude: 77.3718,
@@ -517,7 +522,7 @@ class ProfileProvider extends ChangeNotifier {
       _userBookings = [];
       _wishlistPGIds = [];
       _wishlistPGs = [];
-      _profileStats = ProfileStats();
+      _profileStats = const ProfileStats();
       _selectedProfileImage = null;
 
       notifyListeners();
@@ -530,28 +535,29 @@ class ProfileProvider extends ChangeNotifier {
   void _calculateProfileStats() {
     if (_userProfile == null) return;
 
-    final now = DateTime.now();
-    final totalBookings = _userBookings.length;
-    final activeBookings = _userBookings
-        .where((b) => b.status == 'CONFIRMED' || b.status == 'CHECKED_IN')
-        .length;
-    final completedBookings =
-        _userBookings.where((b) => b.status == 'CHECKED_OUT').length;
-    final totalSpent = _userBookings.fold<double>(
-      0,
-      (sum, b) => sum + b.totalAmount,
-    );
-    final memberSince = _userProfile!.createdAt;
+    final bookingsCount = _userBookings.length;
     final wishlistCount = _wishlistPGIds.length;
+    const reviewsCount = 0; // Not implemented in this demo
+
+    // Calculate profile completion percentage based on filled fields
+    int filledRequiredFields = 0;
+    const totalRequiredFields =
+        5; // name, email, phone, currentLocation, preferredLocation
+
+    if (_userProfile!.name.isNotEmpty) filledRequiredFields++;
+    if (_userProfile!.email.isNotEmpty) filledRequiredFields++;
+    if (_userProfile!.phone.isNotEmpty) filledRequiredFields++;
+    if (_userProfile!.currentLocation.isNotEmpty) filledRequiredFields++;
+    if (_userProfile!.preferredLocation.isNotEmpty) filledRequiredFields++;
+
+    final profileCompletion =
+        ((filledRequiredFields / totalRequiredFields) * 100).round();
 
     _profileStats = ProfileStats(
-      totalBookings: totalBookings,
-      activeBookings: activeBookings,
-      completedBookings: completedBookings,
-      totalSpent: totalSpent,
-      memberSince: memberSince,
+      bookingsCount: bookingsCount,
       wishlistCount: wishlistCount,
-      profileCompletionPercentage: 85, // Mock value
+      reviewsCount: reviewsCount,
+      profileCompletion: profileCompletion,
     );
 
     notifyListeners();
@@ -582,92 +588,5 @@ class ProfileProvider extends ChangeNotifier {
   void _clearError() {
     _hasError = false;
     _errorMessage = '';
-  }
-}
-
-/// Profile statistics model
-class ProfileStats {
-  final int totalBookings;
-  final int activeBookings;
-  final int completedBookings;
-  final double totalSpent;
-  final DateTime memberSince;
-  final int wishlistCount;
-  final String loyaltyTier;
-  final int profileCompletionPercentage;
-
-  ProfileStats({
-    this.totalBookings = 0,
-    this.activeBookings = 0,
-    this.completedBookings = 0,
-    this.totalSpent = 0.0,
-    DateTime? memberSince,
-    this.wishlistCount = 0,
-    this.loyaltyTier = 'Bronze',
-    this.profileCompletionPercentage = 0,
-  }) : memberSince = memberSince ?? ProfileStats.defDate;
-
-  static DateTime defDate = DateTime.now();
-
-  String get formattedTotalSpent => '₹${totalSpent.toInt()}';
-
-  String get memberSinceFormatted {
-    final now = DateTime.now();
-    final difference = now.difference(memberSince);
-
-    if (difference.inDays < 30) {
-      return '${difference.inDays} days';
-    } else if (difference.inDays < 365) {
-      return '${(difference.inDays / 30).floor()} months';
-    } else {
-      return '${(difference.inDays / 365).floor()} years';
-    }
-  }
-
-  Color get loyaltyTierColor {
-    switch (loyaltyTier.toLowerCase()) {
-      case 'gold':
-        return const Color(0xFFFFD700);
-      case 'silver':
-        return const Color(0xFFC0C0C0);
-      default:
-        return const Color(0xFFCD7F32); // Bronze
-    }
-  }
-}
-
-/// App settings model
-class AppSettings {
-  final String themeMode; // 'light', 'dark', 'system'
-  final bool notificationsEnabled;
-  final bool locationTrackingEnabled;
-  final bool emailNotificationsEnabled;
-  final bool smsNotificationsEnabled;
-
-  const AppSettings({
-    this.themeMode = 'system',
-    this.notificationsEnabled = true,
-    this.locationTrackingEnabled = true,
-    this.emailNotificationsEnabled = true,
-    this.smsNotificationsEnabled = false,
-  });
-
-  AppSettings copyWith({
-    String? themeMode,
-    bool? notificationsEnabled,
-    bool? locationTrackingEnabled,
-    bool? emailNotificationsEnabled,
-    bool? smsNotificationsEnabled,
-  }) {
-    return AppSettings(
-      themeMode: themeMode ?? this.themeMode,
-      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
-      locationTrackingEnabled:
-          locationTrackingEnabled ?? this.locationTrackingEnabled,
-      emailNotificationsEnabled:
-          emailNotificationsEnabled ?? this.emailNotificationsEnabled,
-      smsNotificationsEnabled:
-          smsNotificationsEnabled ?? this.smsNotificationsEnabled,
-    );
   }
 }

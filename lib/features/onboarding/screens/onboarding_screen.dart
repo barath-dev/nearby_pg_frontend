@@ -75,7 +75,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     context.read<AppProvider>().setFirstTime(false);
 
     // Navigate to login screen
-    NavigationService.navigateToLogin();
+    NavigationService.navigateToLogin(context);
   }
 
   @override

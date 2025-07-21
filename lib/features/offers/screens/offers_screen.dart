@@ -1,3 +1,4 @@
+// lib/features/offers/screens/offers_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
@@ -5,6 +6,7 @@ import 'package:shimmer/shimmer.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../providers/offers_provider.dart';
+// Import the models from shared location instead of defining them in this file
 import '../../../shared/models/app_models.dart';
 
 class OffersScreen extends StatefulWidget {
@@ -100,26 +102,12 @@ class _OffersScreenState extends State<OffersScreen>
             boxShadow: _isScrolled
                 ? [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withOpacity(0.1),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
                   ]
                 : null,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 70, 20, 0),
-                child: Text(
-                  'Exclusive offers to save on your next PG booking',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.gray600,
-                      ),
-                ),
-              ),
-            ],
           ),
         ),
       ),
@@ -135,11 +123,10 @@ class _OffersScreenState extends State<OffersScreen>
           unselectedLabelColor: AppTheme.gray600,
           indicatorColor: AppTheme.emeraldGreen,
           indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w600),
           tabs: const [
-            Tab(text: 'PG OFFERS'),
-            Tab(text: 'COUPONS'),
-            Tab(text: 'REFERRALS'),
+            Tab(text: 'Offers'),
+            Tab(text: 'Coupons'),
+            Tab(text: 'Refer & Earn'),
           ],
         ),
       ),
@@ -148,25 +135,24 @@ class _OffersScreenState extends State<OffersScreen>
   }
 
   Widget _buildLoadingState() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 5,
-        itemBuilder: (context, index) {
-          return Card(
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 4,
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(
             margin: const EdgeInsets.only(bottom: 16),
-            shape: RoundedRectangleBorder(
+            height: 180,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Container(
-              height: 180,
-              width: double.infinity,
-            ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -235,14 +221,192 @@ class _OffersScreenState extends State<OffersScreen>
     );
   }
 
+  Widget _buildOfferCard(Offer offer) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Offer image with overlay
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(12)),
+                child: Image.network(
+                  offer.imageUrl,
+                  height: 140,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Text(
+                    offer.discountText,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+              if (offer.isExclusive)
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.amber,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.star,
+                          color: Colors.white,
+                          size: 12,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'EXCLUSIVE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              // Expiry overlay
+              if (offer.expiryDate != null)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.7),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                    child: Text(
+                      'Expires in ${_getDaysRemaining(offer.expiryDate!)} days',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+
+          // Offer details
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  offer.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.deepCharcoal,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  offer.description,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.gray700,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Action buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _showOfferTerms(offer),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppTheme.emeraldGreen),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'VIEW TERMS',
+                          style: TextStyle(color: AppTheme.emeraldGreen),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _redeemOffer(offer),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.emeraldGreen,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text('REDEEM NOW'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCouponsTab(OffersProvider provider) {
     final coupons = provider.coupons;
 
     if (coupons.isEmpty) {
       return _buildEmptyState(
-        icon: Icons.card_giftcard,
+        icon: Icons.confirmation_number_outlined,
         title: 'No coupons available',
-        message: 'Check back later for discount coupons',
+        message: 'Check back soon for exclusive discount coupons',
       );
     }
 
@@ -260,463 +424,158 @@ class _OffersScreenState extends State<OffersScreen>
     );
   }
 
-  Widget _buildReferralsTab(OffersProvider provider) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _buildReferralCard(provider),
-          const SizedBox(height: 24),
-          _buildReferralHistory(provider),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOfferCard(Offer offer) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Offer image with overlay
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(12)),
-                child: Image.network(
-                  offer.imageUrl,
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 140,
-                      color: AppTheme.lightMint.withOpacity(0.3),
-                      child: Center(
-                        child: Icon(
-                          Icons.image_not_supported,
-                          size: 40,
-                          color: AppTheme.gray400,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              if (offer.isExclusive)
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.emeraldGreen,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'EXCLUSIVE',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ),
-              if (offer.expiryDate != null)
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'Expires in ${_getDaysRemaining(offer.expiryDate!)} days',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-
-          // Offer details
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  offer.title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.deepCharcoal,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  offer.description,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.gray700,
-                      ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Discount badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.red[100]!),
-                      ),
-                      child: Text(
-                        offer.discountText,
-                        style: TextStyle(
-                          color: Colors.red[700],
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    // Apply button
-                    TextButton(
-                      onPressed: () {
-                        _showOfferDetails(offer);
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.emeraldGreen,
-                      ),
-                      child: const Text('VIEW DETAILS'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildCouponCard(Coupon coupon) {
     return Card(
-      elevation: 2,
       margin: const EdgeInsets.only(bottom: 16),
+      elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: coupon.isValid
-                ? [AppTheme.emeraldGreen.withOpacity(0.1), Colors.white]
-                : [Colors.grey[300]!, Colors.white],
-          ),
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Coupon icon
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: coupon.isValid
-                          ? AppTheme.emeraldGreen.withOpacity(0.1)
-                          : Colors.grey[200],
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.local_offer,
-                      size: 24,
-                      color:
-                          coupon.isValid ? AppTheme.emeraldGreen : Colors.grey,
-                    ),
-                  ),
-
-                  const SizedBox(width: 16),
-
-                  // Coupon details
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          coupon.title,
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: coupon.isValid
-                                        ? AppTheme.deepCharcoal
-                                        : Colors.grey,
-                                  ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          coupon.description,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: coupon.isValid
-                                        ? AppTheme.gray600
-                                        : Colors.grey,
-                                  ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Validity info
-                        if (coupon.isValid && coupon.expiryDate != null)
-                          Text(
-                            'Valid till ${_formatDate(coupon.expiryDate!)}',
-                            style: TextStyle(
-                              color: AppTheme.emeraldGreen,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 12,
-                            ),
-                          )
-                        else if (!coupon.isValid)
-                          Text(
-                            'Expired',
-                            style: TextStyle(
-                              color: Colors.red[700],
-                              fontWeight: FontWeight.w500,
-                              fontSize: 12,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Coupon code section with dotted border
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: Colors.grey[300]!,
-                    width: 1,
-                    style: BorderStyle.solid,
-                  ),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Coupon code
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: Text(
-                      coupon.code,
-                      style: TextStyle(
-                        color: AppTheme.deepCharcoal,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ),
-
-                  // Copy button
-                  TextButton.icon(
-                    onPressed: coupon.isValid
-                        ? () => _copyCouponCode(coupon.code)
-                        : null,
-                    icon: const Icon(Icons.copy, size: 16),
-                    label: const Text('COPY'),
-                    style: TextButton.styleFrom(
-                      foregroundColor:
-                          coupon.isValid ? AppTheme.emeraldGreen : Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Apply button
-            SizedBox(
-              width: double.infinity,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: ElevatedButton(
-                  onPressed: coupon.isValid ? () => _applyCoupon(coupon) : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.emeraldGreen,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey[300],
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    coupon.isValid ? 'APPLY' : 'EXPIRED',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+        side: BorderSide(
+          color: coupon.isValid ? Colors.grey.shade200 : Colors.red.shade100,
         ),
       ),
-    );
-  }
-
-  Widget _buildReferralCard(OffersProvider provider) {
-    final referralCode = provider.referralCode;
-    final referralBonus = provider.referralBonus;
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      color: coupon.isValid ? Colors.white : Colors.red.shade50,
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Refer & Earn',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.emeraldGreen,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Invite friends to NEARBY PG and earn ₹$referralBonus when they complete their first booking!',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.gray700,
-                  ),
-            ),
-            const SizedBox(height: 24),
-
-            // Referral code section
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.emeraldGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: AppTheme.emeraldGreen.withOpacity(0.3),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Your Referral Code',
-                    style: TextStyle(
-                      color: AppTheme.gray600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          referralCode,
-                          style: TextStyle(
-                            color: AppTheme.emeraldGreen,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => _copyReferralCode(referralCode),
-                        icon: const Icon(
-                          Icons.copy,
-                          color: AppTheme.emeraldGreen,
-                        ),
-                        tooltip: 'Copy Code',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Share buttons
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _shareReferralCode(referralCode),
-                    icon: const Icon(Icons.share),
-                    label: const Text('SHARE'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.emeraldGreen,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
+                // Coupon icon
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: coupon.isValid
+                        ? AppTheme.emeraldGreen.withOpacity(0.1)
+                        : Colors.red.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.confirmation_number_outlined,
+                    color: coupon.isValid
+                        ? AppTheme.emeraldGreen
+                        : Colors.red[300],
+                    size: 24,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showReferralTerms(),
-                    icon: const Icon(Icons.info_outline),
-                    label: const Text('TERMS'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.emeraldGreen,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: BorderSide(color: AppTheme.emeraldGreen),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        coupon.title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: coupon.isValid
+                              ? AppTheme.deepCharcoal
+                              : Colors.red[300],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 4),
+                      Text(
+                        coupon.description,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.gray700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Coupon code
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: coupon.isValid
+                    ? AppTheme.gray100
+                    : Colors.red.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: coupon.isValid
+                      ? Colors.grey.shade300
+                      : Colors.red.shade200,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    coupon.code,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: coupon.isValid
+                          ? AppTheme.emeraldGreen
+                          : Colors.red[300],
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  if (coupon.isValid)
+                    GestureDetector(
+                      onTap: () {
+                        // Copy to clipboard
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Coupon code copied to clipboard'),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: AppTheme.emeraldGreen,
+                          ),
+                        );
+                      },
+                      child: const Icon(
+                        Icons.copy_outlined,
+                        size: 16,
+                        color: AppTheme.emeraldGreen,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Validity info
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  coupon.isValid
+                      ? 'Valid till: ${coupon.expiryDate != null ? _formatDate(coupon.expiryDate!) : 'No expiry'}'
+                      : 'EXPIRED',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: coupon.isValid ? AppTheme.gray600 : Colors.red[300],
+                  ),
+                ),
+                if (coupon.isValid)
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, AppConstants.searchRoute);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.emeraldGreen,
+                      foregroundColor: Colors.white,
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    child: const Text('USE NOW'),
+                  ),
               ],
             ),
           ],
@@ -725,119 +584,348 @@ class _OffersScreenState extends State<OffersScreen>
     );
   }
 
-  Widget _buildReferralHistory(OffersProvider provider) {
-    final referrals = provider.referrals;
+  Widget _buildReferralsTab(OffersProvider provider) {
+    return RefreshIndicator(
+      onRefresh: provider.refresh,
+      color: AppTheme.emeraldGreen,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Referral program info
+            _buildReferralProgramCard(provider),
+            const SizedBox(height: 24),
 
-    if (referrals.isEmpty) {
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
+            // Referrals list
+            if (provider.referrals.isNotEmpty) ...[
               Text(
-                'Referral History',
+                'Your Referrals',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppTheme.deepCharcoal,
                     ),
               ),
-              const SizedBox(height: 40),
-              const Icon(
-                Icons.people_outline,
-                size: 64,
-                color: AppTheme.gray400,
-              ),
               const SizedBox(height: 16),
-              Text(
-                'No referrals yet',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.gray600,
-                    ),
+              ...provider.referrals.map(
+                (referral) => _buildReferralListItem(referral),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Share your referral code with friends to start earning rewards',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.gray600,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
+            ] else
+              _buildEmptyReferrals(),
+          ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+  Widget _buildReferralProgramCard(OffersProvider provider) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.emeraldGreen,
+            AppTheme.emeraldGreen.withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.emeraldGreen.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              'Referral History',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.deepCharcoal,
-                  ),
-            ),
-          ),
-          const Divider(height: 1),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: referrals.length,
-            separatorBuilder: (context, index) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final referral = referrals[index];
-              return ListTile(
-                title: Text(
-                  referral.name,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.card_giftcard,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'REFER & EARN',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Refer a friend and both get ₹${provider.referralBonus.toInt()}',
                   style: const TextStyle(
-                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
                   ),
                 ),
-                subtitle: Text(
-                  'Joined on ${_formatDate(referral.joinedDate)}',
+                const SizedBox(height: 8),
+                Text(
+                  'Share your referral code with friends and earn ₹${provider.referralBonus.toInt()} when they complete their first booking',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 14,
+                  ),
                 ),
-                trailing: referral.isComplete
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '+ ₹${referral.bonusAmount}',
-                            style: TextStyle(
-                              color: Colors.green[700],
-                              fontWeight: FontWeight.bold,
+                const SizedBox(height: 24),
+                // Referral code
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Your Referral Code',
+                              style: TextStyle(
+                                color: AppTheme.gray600,
+                                fontSize: 12,
+                              ),
                             ),
-                          ),
-                          const Text(
-                            'Earned',
-                            style: TextStyle(
-                              color: AppTheme.gray600,
-                              fontSize: 12,
+                            const SizedBox(height: 4),
+                            Text(
+                              provider.referralCode,
+                              style: const TextStyle(
+                                color: AppTheme.deepCharcoal,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 22,
+                                letterSpacing: 2,
+                              ),
                             ),
-                          ),
-                        ],
-                      )
-                    : const Text(
-                        'Pending',
-                        style: TextStyle(
-                          color: Colors.orange,
+                          ],
                         ),
                       ),
-              );
-            },
+                      ElevatedButton(
+                        onPressed: () {
+                          // Copy to clipboard
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content:
+                                  Text('Referral code copied to clipboard'),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: AppTheme.emeraldGreen,
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.deepCharcoal,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                        ),
+                        child: const Text('COPY'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Share section
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildShareButton(
+                    'WhatsApp', Icons.wechat_outlined, Colors.green),
+                _buildShareButton('SMS', Icons.sms, Colors.blue),
+                _buildShareButton('Email', Icons.email, Colors.orange),
+                _buildShareButton('More', Icons.more_horiz, Colors.purple),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShareButton(String label, IconData icon, Color color) {
+    return InkWell(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sharing via $label'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppTheme.emeraldGreen,
+          ),
+        );
+      },
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 20,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppTheme.gray700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReferralListItem(Referral referral) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            // Avatar
+            CircleAvatar(
+              backgroundColor: AppTheme.emeraldGreen.withOpacity(0.1),
+              child: Text(
+                referral.name.isNotEmpty ? referral.name[0].toUpperCase() : 'U',
+                style: const TextStyle(
+                  color: AppTheme.emeraldGreen,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    referral.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Joined ${_formatDate(referral.joinedDate)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.gray600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Status
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: referral.isComplete
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    referral.isComplete ? 'COMPLETED' : 'PENDING',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: referral.isComplete ? Colors.green : Colors.orange,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '₹${referral.bonusAmount.toInt()}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: referral.isComplete
+                        ? AppTheme.emeraldGreen
+                        : AppTheme.gray600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyReferrals() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 24),
+          const Icon(
+            Icons.people_outline,
+            size: 64,
+            color: AppTheme.gray400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No referrals yet',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.deepCharcoal,
+                ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Share your code with friends and earn rewards',
+            style: TextStyle(
+              color: AppTheme.gray600,
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -862,302 +950,55 @@ class _OffersScreenState extends State<OffersScreen>
           Text(
             title,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.bold,
                   color: AppTheme.deepCharcoal,
                 ),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.gray600,
-                ),
-            textAlign: TextAlign.center,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppTheme.gray600,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _showOfferDetails(Offer offer) {
-    showModalBottomSheet(
+  void _showOfferTerms(Offer offer) {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.85,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle bar
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                height: 4,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-
-            // Image
-            SizedBox(
-              height: 200,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.network(
-                    offer.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: AppTheme.lightMint.withOpacity(0.3),
-                        child: Center(
-                          child: Icon(
-                            Icons.image_not_supported,
-                            size: 40,
-                            color: AppTheme.gray400,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.7),
-                        ],
-                        stops: const [0.7, 1.0],
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    right: 16,
-                    child: Text(
-                      offer.title,
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Discount badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.red[100]!),
-                      ),
-                      child: Text(
-                        offer.discountText,
-                        style: TextStyle(
-                          color: Colors.red[700],
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Description
-                    Text(
-                      'About this offer',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.deepCharcoal,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      offer.description,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.gray700,
-                            height: 1.5,
-                          ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Terms
-                    Text(
-                      'Terms & Conditions',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.deepCharcoal,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Column(
+      builder: (context) => AlertDialog(
+        title: const Text('Terms & Conditions'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...offer.terms.map((term) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: offer.terms.map((term) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('• '),
-                              Expanded(
-                                child: Text(
-                                  term,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: AppTheme.gray700,
-                                      ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                      children: [
+                        const Text('• '),
+                        Expanded(child: Text(term)),
+                      ],
                     ),
-
-                    const SizedBox(height: 16),
-
-                    // Validity
-                    if (offer.expiryDate != null)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.access_time,
-                              size: 20,
-                              color: AppTheme.gray600,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Valid till ${_formatDate(offer.expiryDate!)}',
-                              style: const TextStyle(
-                                color: AppTheme.gray700,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Apply button
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -5),
-                  ),
-                ],
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _redeemOffer(offer),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.emeraldGreen,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'REDEEM OFFER',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+                  )),
+            ],
+          ),
         ),
-      ),
-    );
-  }
-
-  void _copyCouponCode(String code) {
-    // In a real app, would use Clipboard.setData
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Coupon code $code copied to clipboard'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.emeraldGreen,
-      ),
-    );
-  }
-
-  void _applyCoupon(Coupon coupon) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Coupon ${coupon.code} applied successfully'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.emeraldGreen,
-      ),
-    );
-    Navigator.pushNamed(context, AppConstants.searchRoute);
-  }
-
-  void _copyReferralCode(String code) {
-    // In a real app, would use Clipboard.setData
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Referral code $code copied to clipboard'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.emeraldGreen,
-      ),
-    );
-  }
-
-  void _shareReferralCode(String code) {
-    // In a real app, would use share package
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Sharing referral code'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.emeraldGreen,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CLOSE'),
+          ),
+        ],
       ),
     );
   }
@@ -1166,7 +1007,7 @@ class _OffersScreenState extends State<OffersScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Referral Terms & Conditions'),
+        title: const Text('Referral Program Terms'),
         content: const SingleChildScrollView(
           child: Text(
             '1. Both referrer and referee get ₹500 when the referee completes their first booking.\n\n'
@@ -1188,8 +1029,8 @@ class _OffersScreenState extends State<OffersScreen>
 
   void _redeemOffer(Offer offer) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Redirecting to PG booking'),
+      const SnackBar(
+        content: Text('Redirecting to PG booking'),
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppTheme.emeraldGreen,
       ),
@@ -1233,62 +1074,5 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   }
 }
 
-// Models for Offers screen
-
-class Offer {
-  final String id;
-  final String title;
-  final String description;
-  final String imageUrl;
-  final String discountText;
-  final bool isExclusive;
-  final DateTime? expiryDate;
-  final List<String> terms;
-  final String? couponCode;
-
-  const Offer({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.imageUrl,
-    required this.discountText,
-    this.isExclusive = false,
-    this.expiryDate,
-    required this.terms,
-    this.couponCode,
-  });
-}
-
-class Coupon {
-  final String id;
-  final String code;
-  final String title;
-  final String description;
-  final DateTime? expiryDate;
-  final bool isValid;
-
-  const Coupon({
-    required this.id,
-    required this.code,
-    required this.title,
-    required this.description,
-    this.expiryDate,
-    this.isValid = true,
-  });
-}
-
-class Referral {
-  final String id;
-  final String name;
-  final DateTime joinedDate;
-  final bool isComplete;
-  final double bonusAmount;
-
-  const Referral({
-    required this.id,
-    required this.name,
-    required this.joinedDate,
-    required this.isComplete,
-    required this.bonusAmount,
-  });
-}
+// The model definitions for Offer, Coupon, and Referral have been moved to app_models.dart
+// and are now imported from there

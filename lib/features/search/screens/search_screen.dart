@@ -5,7 +5,7 @@ import 'package:shimmer/shimmer.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
-import '../provider/search_provider.dart';
+import '../providers/search_provider.dart';
 import '../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../shared/models/app_models.dart';
 import '../../../shared/widgets/pg_card.dart';
@@ -285,7 +285,7 @@ class _SearchScreenState extends State<SearchScreen> {
           focusNode: _searchFocusNode,
           decoration: InputDecoration(
             hintText: 'Search by location, PG name, amenities...',
-            hintStyle: TextStyle(color: AppTheme.gray500, fontSize: 14),
+            hintStyle: const TextStyle(color: AppTheme.gray500, fontSize: 14),
             prefixIcon: Container(
               margin: const EdgeInsets.all(12),
               padding: const EdgeInsets.all(6),
@@ -293,7 +293,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 color: AppTheme.emeraldGreen.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.search_rounded,
                 color: AppTheme.emeraldGreen,
                 size: 16,
@@ -301,7 +301,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
-                    icon: Icon(
+                    icon: const Icon(
                       Icons.clear_rounded,
                       color: AppTheme.gray500,
                       size: 16,
@@ -354,7 +354,7 @@ class _SearchScreenState extends State<SearchScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
+                  const Text(
                     'Recent Searches',
                     style: TextStyle(
                       color: AppTheme.gray700,
@@ -367,7 +367,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       onPressed: () {
                         provider.clearSearchHistory();
                       },
-                      child: Text(
+                      child: const Text(
                         'Clear',
                         style: TextStyle(
                           color: AppTheme.emeraldGreen,
@@ -399,7 +399,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.history,
                             color: AppTheme.emeraldGreen,
                             size: 14,
@@ -407,7 +407,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           const SizedBox(width: 4),
                           Text(
                             search,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppTheme.emeraldGreen,
                               fontWeight: FontWeight.w500,
                               fontSize: 12,
@@ -442,7 +442,7 @@ class _SearchScreenState extends State<SearchScreen> {
               Expanded(
                 child: RichText(
                   text: TextSpan(
-                    style: TextStyle(color: AppTheme.gray700, fontSize: 13),
+                    style: const TextStyle(color: AppTheme.gray700, fontSize: 13),
                     children: [
                       TextSpan(
                         text: '${provider.searchResults.length} ',
@@ -485,8 +485,8 @@ class _SearchScreenState extends State<SearchScreen> {
               InkWell(
                 onTap: _showSortOptions,
                 borderRadius: BorderRadius.circular(20),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 6,
                   ),
@@ -498,7 +498,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         size: 16,
                         color: AppTheme.gray700,
                       ),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       Text(
                         'Sort',
                         style: TextStyle(
@@ -598,7 +598,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 color: AppTheme.emeraldGreen.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.search_rounded,
                 size: 48,
                 color: AppTheme.emeraldGreen,
@@ -671,7 +671,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 child: Text(
                   suggestion,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppTheme.emeraldGreen,
                     fontWeight: FontWeight.w500,
                   ),
@@ -737,7 +737,7 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off_rounded, size: 64, color: AppTheme.gray400),
+            const Icon(Icons.search_off_rounded, size: 64, color: AppTheme.gray400),
             const SizedBox(height: 16),
             Text(
               'No Results Found',
@@ -822,26 +822,6 @@ class _SearchScreenState extends State<SearchScreen> {
           padding: const EdgeInsets.only(bottom: 16),
           child: PGCard(
             pgProperty: pg,
-            variant: PGCardVariant.detailed,
-            onTap: () => _navigateToPGDetail(pg.id),
-            onWishlistTap: () {
-              // Wishlist functionality would be implemented here
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Wishlist feature coming soon!'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            onContactTap: () {
-              // Contact functionality would be implemented here
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Contact feature coming soon!'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
           ),
         );
       },
@@ -871,21 +851,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
         // Show compact PG card
         final pg = provider.searchResults[index];
-        return PGCard(
-          pgProperty: pg,
-          variant: PGCardVariant.compact,
-          onTap: () => _navigateToPGDetail(pg.id),
-          isWishlisted: false,
-          onWishlistTap: () {
-            // Wishlist functionality would be implemented here
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Wishlist feature coming soon!'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
-        );
+        return PGCard(pgProperty: pg, variant: PGCardVariant.compact);
       },
     );
   }

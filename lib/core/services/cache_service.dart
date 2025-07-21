@@ -1,379 +1,464 @@
 // lib/core/services/cache_service.dart
-import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:nearby_pg/shared/models/app_models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../constants/app_constants.dart';
-import '../../shared/models/app_models.dart';
-
-/// Service for caching data and user preferences
+/// Service for caching data locally
 class CacheService {
-  late final Box _cacheBox;
-  late final Box _userPreferencesBox;
-  late final Box _searchHistoryBox;
-  late final Box _pgDataCache;
-  late final Box _bookingCacheBox;
+  // Using Hive for complex data structures
+  late Box<dynamic> _userPreferencesBox;
+  late Box<dynamic> _cachedDataBox;
+  late Box<dynamic> _authBox;
+
+  // Using SharedPreferences for simple key-value pairs
   late SharedPreferences _prefs;
 
-  /// Initialize the cache service
+  // Constants
+  static const String _authTokenKey = 'auth_token';
+  static const String _userIdKey = 'user_id';
+
+  // Initialization flag
+  bool _isInitialized = false;
+
+  /// Initialize cache service
   Future<void> initialize() async {
+    if (_isInitialized) return;
+
     try {
-      _cacheBox = Hive.box(AppConstants.cacheBox);
-      _userPreferencesBox = Hive.box(AppConstants.userPreferencesBox);
-      _searchHistoryBox = Hive.box(AppConstants.searchHistoryBox);
-      _pgDataCache = Hive.box('pg_data_cache');
-      _bookingCacheBox = Hive.box(AppConstants.bookingCacheBox);
+      // Initialize Hive
+      await Hive.initFlutter();
+
+      // Open Hive boxes
+      _userPreferencesBox = await Hive.openBox('userPreferences');
+      _cachedDataBox = await Hive.openBox('cachedData');
+      _authBox = await Hive.openBox('auth');
+
+      // Initialize SharedPreferences
       _prefs = await SharedPreferences.getInstance();
 
-      debugPrint('✅ Cache service initialized successfully');
+      _isInitialized = true;
     } catch (e) {
-      debugPrint('❌ Error initializing cache service: $e');
+      debugPrint('Error initializing cache service: $e');
+      // Create fallback boxes for testing/development
+      _handleInitializationError();
     }
   }
 
-  /// Clear all cached data
-  Future<void> clearCache() async {
+  /// Handle initialization errors by creating empty boxes
+  void _handleInitializationError() {
     try {
-      await _cacheBox.clear();
-      await _pgDataCache.clear();
-      await _bookingCacheBox.clear();
-      debugPrint('✅ Cache cleared successfully');
-    } catch (e) {
-      debugPrint('❌ Error clearing cache: $e');
-    }
-  }
-
-  /// Clear user data (for logout)
-  Future<void> clearUserData() async {
-    try {
-      await _userPreferencesBox.clear();
-      await _prefs.remove('auth_token');
-      await _prefs.remove('user_id');
-      debugPrint('✅ User data cleared successfully');
-    } catch (e) {
-      debugPrint('❌ Error clearing user data: $e');
-    }
-  }
-
-  // PG Caching Methods
-
-  /// Cache a list of PG properties
-  Future<void> cachePGs(List<PGProperty> pgs) async {
-    try {
-      // Store in Hive box
-      await _pgDataCache.put('pg_list', pgs.map((pg) => pg.toJson()).toList());
-
-      // Cache individual PGs for quick access
-      for (final pg in pgs) {
-        await cachePG(pg);
+      if (Hive.isBoxOpen('userPreferences')) {
+        _userPreferencesBox = Hive.box('userPreferences');
       }
-
-      // Update cache timestamp
-      await _cacheBox.put(
-        'pg_list_timestamp',
-        DateTime.now().millisecondsSinceEpoch,
-      );
-    } catch (e) {
-      debugPrint('❌ Error caching PGs: $e');
-    }
-  }
-
-  /// Cache a single PG property
-  Future<void> cachePG(PGProperty pg) async {
-    try {
-      await _pgDataCache.put('pg_${pg.id}', pg.toJson());
-    } catch (e) {
-      debugPrint('❌ Error caching PG: $e');
-    }
-  }
-
-  /// Get cached PG list
-  Future<List<PGProperty>> getCachedPGs() async {
-    try {
-      final cached = _pgDataCache.get('pg_list');
-      if (cached == null) {
-        return [];
+      if (Hive.isBoxOpen('cachedData')) {
+        _cachedDataBox = Hive.box('cachedData');
       }
-
-      return (cached as List).map((json) => PGProperty.fromJson(json)).toList();
-    } catch (e) {
-      debugPrint('❌ Error getting cached PGs: $e');
-      return [];
-    }
-  }
-
-  /// Get a cached PG by ID
-  Future<PGProperty?> getCachedPG(String pgId) async {
-    try {
-      final cached = _pgDataCache.get('pg_$pgId');
-      if (cached == null) {
-        return null;
+      if (Hive.isBoxOpen('auth')) {
+        _authBox = Hive.box('auth');
       }
-
-      return PGProperty.fromJson(cached);
     } catch (e) {
-      debugPrint('❌ Error getting cached PG: $e');
-      return null;
+      debugPrint('Error creating fallback boxes: $e');
     }
   }
 
-  /// Check if PG list cache is valid (not expired)
-  bool isPGCacheValid() {
-    final timestamp = _cacheBox.get('pg_list_timestamp');
-    if (timestamp == null) {
-      return false;
-    }
-
-    final cacheDuration = DateTime.now().millisecondsSinceEpoch - timestamp;
-    return cacheDuration < AppConstants.pgCacheValidityDuration.inMilliseconds;
-  }
-
-  // Search History Methods
-
-  /// Save a search query to history
-  Future<void> saveSearchQuery(String query) async {
-    try {
-      if (query.trim().isEmpty) {
-        return;
-      }
-
-      List<String> searches = await getRecentSearches();
-
-      // Remove if already exists
-      searches.removeWhere((item) => item.toLowerCase() == query.toLowerCase());
-
-      // Add to the beginning
-      searches.insert(0, query);
-
-      // Keep only the latest N searches
-      if (searches.length > AppConstants.maxRecentSearches) {
-        searches = searches.sublist(0, AppConstants.maxRecentSearches);
-      }
-
-      await _searchHistoryBox.put('recent_searches', searches);
-    } catch (e) {
-      debugPrint('❌ Error saving search query: $e');
+  /// Ensure the cache service is initialized before any operation
+  Future<void> _ensureInitialized() async {
+    if (!_isInitialized) {
+      await initialize();
     }
   }
 
-  /// Get recent search queries
+  /// Get recent searches
   Future<List<String>> getRecentSearches() async {
+    await _ensureInitialized();
+
     try {
-      final searches = _searchHistoryBox.get('recent_searches');
-      if (searches == null) {
-        return [];
+      final recentSearches = _userPreferencesBox.get('recentSearches');
+      if (recentSearches != null && recentSearches is List) {
+        return recentSearches.cast<String>();
       }
-
-      return List<String>.from(searches);
     } catch (e) {
-      debugPrint('❌ Error getting recent searches: $e');
-      return [];
+      debugPrint('Error getting recent searches: $e');
     }
+
+    return [];
   }
 
-  /// Clear search history
-  Future<void> clearSearchHistory() async {
-    try {
-      await _searchHistoryBox.put('recent_searches', []);
-    } catch (e) {
-      debugPrint('❌ Error clearing search history: $e');
-    }
-  }
+  /// Save recent searches
+  Future<void> saveRecentSearches(List<String> searches) async {
+    await _ensureInitialized();
 
-  /// Save search filters
-  Future<void> saveSearchFilters(SearchFilter filters) async {
     try {
-      await _userPreferencesBox.put('search_filters', filters.toJson());
+      await _userPreferencesBox.put('recentSearches', searches);
     } catch (e) {
-      debugPrint('❌ Error saving search filters: $e');
+      debugPrint('Error saving recent searches: $e');
     }
   }
 
   /// Get saved search filters
-  Future<SearchFilter?> getSavedSearchFilters() async {
+  Future<dynamic> getSavedSearchFilters() async {
+    await _ensureInitialized();
+
     try {
-      final filters = _userPreferencesBox.get('search_filters');
-      if (filters != null) {
-        return SearchFilter.fromJson(Map<String, dynamic>.from(filters));
-      }
+      return _userPreferencesBox.get('searchFilters');
     } catch (e) {
-      debugPrint('❌ Error getting saved search filters: $e');
+      debugPrint('Error getting saved search filters: $e');
     }
+
     return null;
   }
 
-  /// Cache data with expiry
+  /// Save search filters
+  Future<void> saveSearchFilters(dynamic filters) async {
+    await _ensureInitialized();
+
+    try {
+      await _userPreferencesBox.put('searchFilters', filters);
+    } catch (e) {
+      debugPrint('Error saving search filters: $e');
+    }
+  }
+
+  /// Get wishlist
+  Future<List<String>> getWishlist() async {
+    await _ensureInitialized();
+
+    try {
+      final wishlist = _userPreferencesBox.get('wishlist');
+      if (wishlist != null && wishlist is List) {
+        return wishlist.cast<String>();
+      }
+    } catch (e) {
+      debugPrint('Error getting cached wishlist: $e');
+    }
+
+    return [];
+  }
+
+  /// Save wishlist
+  Future<void> saveWishlist(List<String> wishlist) async {
+    await _ensureInitialized();
+
+    try {
+      await _userPreferencesBox.put('wishlist', wishlist);
+    } catch (e) {
+      debugPrint('Error saving wishlist: $e');
+    }
+  }
+
+  /// Get user preference with generic type
+  Future<T?> getUserPreference<T>(String key) async {
+    await _ensureInitialized();
+
+    try {
+      final value = _userPreferencesBox.get(key);
+      if (value != null) {
+        return value as T?;
+      }
+
+      // Fallback to SharedPreferences
+      if (_prefs.containsKey(key)) {
+        final value = _prefs.get(key);
+        if (value is T) {
+          return value;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting user preference: $e');
+    }
+
+    return null;
+  }
+
+  /// Save user preference with generic type
+  Future<void> saveUserPreference<T>(String key, T value) async {
+    await _ensureInitialized();
+
+    try {
+      await _userPreferencesBox.put(key, value);
+    } catch (e) {
+      debugPrint('Error saving user preference: $e');
+
+      // Fallback to SharedPreferences
+      try {
+        if (value is String) {
+          await _prefs.setString(key, value);
+        } else if (value is int) {
+          await _prefs.setInt(key, value);
+        } else if (value is double) {
+          await _prefs.setDouble(key, value);
+        } else if (value is bool) {
+          await _prefs.setBool(key, value);
+        } else if (value is List<String>) {
+          await _prefs.setStringList(key, value);
+        }
+      } catch (e) {
+        debugPrint('Error saving to SharedPreferences: $e');
+      }
+    }
+  }
+
+  /// Get authentication token
+  Future<String?> getAuthToken() async {
+    await _ensureInitialized();
+
+    try {
+      final token = _authBox.get(_authTokenKey);
+      if (token != null && token is String) {
+        return token;
+      }
+
+      // Fallback to SharedPreferences
+      return _prefs.getString(_authTokenKey);
+    } catch (e) {
+      debugPrint('Error getting auth token: $e');
+    }
+
+    return null;
+  }
+
+  /// Save authentication token
+  Future<void> saveAuthToken(String token) async {
+    await _ensureInitialized();
+
+    try {
+      await _authBox.put(_authTokenKey, token);
+
+      // Also save to SharedPreferences as backup
+      await _prefs.setString(_authTokenKey, token);
+    } catch (e) {
+      debugPrint('Error saving auth token: $e');
+    }
+  }
+
+  /// Get user ID
+  Future<String?> getUserId() async {
+    await _ensureInitialized();
+
+    try {
+      final userId = _authBox.get(_userIdKey);
+      if (userId != null && userId is String) {
+        return userId;
+      }
+
+      // Fallback to SharedPreferences
+      return _prefs.getString(_userIdKey);
+    } catch (e) {
+      debugPrint('Error getting user ID: $e');
+    }
+
+    return null;
+  }
+
+  /// Save user ID
+  Future<void> saveUserId(String userId) async {
+    await _ensureInitialized();
+
+    try {
+      await _authBox.put(_userIdKey, userId);
+
+      // Also save to SharedPreferences as backup
+      await _prefs.setString(_userIdKey, userId);
+    } catch (e) {
+      debugPrint('Error saving user ID: $e');
+    }
+  }
+
+  /// Clear user data (used during logout)
+  Future<void> clearUserData() async {
+    await _ensureInitialized();
+
+    try {
+      // Clear auth data
+      await _authBox.clear();
+
+      // Clear auth data from SharedPreferences
+      await _prefs.remove(_authTokenKey);
+      await _prefs.remove(_userIdKey);
+
+      // Optionally clear wishlist and other user-specific data
+      // but keep app settings like theme, language, etc.
+      await _userPreferencesBox.delete('wishlist');
+
+      // Don't clear everything as some preferences should persist across logins
+      // e.g., theme, language, onboarding status, etc.
+    } catch (e) {
+      debugPrint('Error clearing user data: $e');
+    }
+  }
+
+  /// Set cached data
   Future<void> setCache<T>(
     String key,
     T data, {
     Duration? expiry,
     String? category,
   }) async {
-    try {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final expiryTimestamp =
-          expiry != null ? timestamp + expiry.inMilliseconds : null;
+    await _ensureInitialized();
 
-      await _cacheBox.put(key, {
+    try {
+      final cacheEntry = {
         'data': data,
-        'timestamp': timestamp,
-        'expiry': expiryTimestamp,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'expiry': expiry?.inMilliseconds,
         'category': category,
-      });
+      };
+
+      await _cachedDataBox.put(key, cacheEntry);
     } catch (e) {
-      debugPrint('❌ Error setting cache: $e');
+      debugPrint('Error setting cache: $e');
     }
   }
 
   /// Get cached data
   Future<T?> getCache<T>(String key) async {
-    try {
-      final cached = _cacheBox.get(key);
-      if (cached == null) return null;
+    await _ensureInitialized();
 
-      final expiryTimestamp = cached['expiry'];
-      if (expiryTimestamp != null) {
+    try {
+      final cacheEntry = _cachedDataBox.get(key);
+      if (cacheEntry == null) return null;
+
+      // Check expiry
+      final timestamp = cacheEntry['timestamp'] as int;
+      final expiryMs = cacheEntry['expiry'] as int?;
+
+      if (expiryMs != null) {
         final now = DateTime.now().millisecondsSinceEpoch;
-        if (now > expiryTimestamp) {
+        if (now - timestamp > expiryMs) {
           // Cache expired
-          await _cacheBox.delete(key);
+          await _cachedDataBox.delete(key);
           return null;
         }
       }
 
-      return cached['data'] as T;
+      return cacheEntry['data'] as T?;
     } catch (e) {
-      debugPrint('❌ Error getting cache: $e');
-      return null;
+      debugPrint('Error getting cache: $e');
     }
+
+    return null;
   }
 
-  // User Preferences Methods
+  /// Clear cache by category
+  Future<void> clearCacheByCategory(String category) async {
+    await _ensureInitialized();
 
-  /// Save a user preference
-  Future<void> saveUserPreference<T>(String key, T value) async {
     try {
-      await _userPreferencesBox.put(key, value);
-    } catch (e) {
-      debugPrint('❌ Error saving user preference: $e');
-    }
-  }
+      // Get all keys
+      final keys = _cachedDataBox.keys.toList();
 
-  /// Get a user preference
-  Future<T?> getUserPreference<T>(String key) async {
-    try {
-      return _userPreferencesBox.get(key) as T?;
-    } catch (e) {
-      debugPrint('❌ Error getting user preference: $e');
-      return null;
-    }
-  }
-
-  // Authentication Methods
-
-  /// Save authentication token
-  Future<void> saveAuthToken(String token) async {
-    try {
-      await _prefs.setString('auth_token', token);
-    } catch (e) {
-      debugPrint('❌ Error saving auth token: $e');
-    }
-  }
-
-  /// Get authentication token
-  Future<String?> getAuthToken() async {
-    try {
-      return _prefs.getString('auth_token');
-    } catch (e) {
-      debugPrint('❌ Error getting auth token: $e');
-      return null;
-    }
-  }
-
-  /// Save user ID
-  Future<void> saveUserId(String userId) async {
-    try {
-      await _prefs.setString('user_id', userId);
-    } catch (e) {
-      debugPrint('❌ Error saving user ID: $e');
-    }
-  }
-
-  /// Get user ID
-  Future<String?> getUserId() async {
-    try {
-      return _prefs.getString('user_id');
-    } catch (e) {
-      debugPrint('❌ Error getting user ID: $e');
-      return null;
-    }
-  }
-
-  // Booking Methods
-
-  /// Cache user bookings
-  Future<void> cacheBookings(List<Booking> bookings) async {
-    try {
-      await _bookingCacheBox.put(
-        'user_bookings',
-        bookings.map((booking) => booking.toJson()).toList(),
-      );
-      await _bookingCacheBox.put(
-        'bookings_timestamp',
-        DateTime.now().millisecondsSinceEpoch,
-      );
-    } catch (e) {
-      debugPrint('❌ Error caching bookings: $e');
-    }
-  }
-
-  /// Get cached bookings
-  Future<List<Booking>> getCachedBookings() async {
-    try {
-      final cached = _bookingCacheBox.get('user_bookings');
-      if (cached == null) {
-        return [];
+      // Filter and delete
+      for (final key in keys) {
+        final entry = _cachedDataBox.get(key);
+        if (entry != null && entry['category'] == category) {
+          await _cachedDataBox.delete(key);
+        }
       }
-
-      return (cached as List).map((json) => Booking.fromJson(json)).toList();
     } catch (e) {
-      debugPrint('❌ Error getting cached bookings: $e');
-      return [];
+      debugPrint('Error clearing cache: $e');
     }
   }
 
-  // Wishlist Methods
+  /// Clear all cache
+  Future<void> clearAllCache() async {
+    await _ensureInitialized();
 
-  /// Cache wishlist
-  Future<void> cacheWishlist(List<String> pgIds) async {
     try {
-      await _userPreferencesBox.put('wishlist', pgIds);
+      await _cachedDataBox.clear();
     } catch (e) {
-      debugPrint('❌ Error caching wishlist: $e');
+      debugPrint('Error clearing all cache: $e');
     }
   }
 
-  /// Get cached wishlist
+  /// Clear expired cache entries
+  Future<void> clearExpiredCache() async {
+    await _ensureInitialized();
+
+    try {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final keys = _cachedDataBox.keys.toList();
+
+      for (final key in keys) {
+        final entry = _cachedDataBox.get(key);
+        if (entry != null && entry['expiry'] != null) {
+          final timestamp = entry['timestamp'] as int;
+          final expiryMs = entry['expiry'] as int;
+
+          if (now - timestamp > expiryMs) {
+            await _cachedDataBox.delete(key);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error clearing expired cache: $e');
+    }
+  }
+
   Future<List<String>> getCachedWishlist() async {
+    await _ensureInitialized();
+
     try {
-      final cached = _userPreferencesBox.get('wishlist');
-      if (cached == null) {
-        return [];
+      final wishlist = _userPreferencesBox.get('wishlist');
+      if (wishlist != null && wishlist is List<String>) {
+        return wishlist;
       }
 
-      return List<String>.from(cached);
+      return [];
     } catch (e) {
-      debugPrint('❌ Error getting cached wishlist: $e');
+      debugPrint('Error getting cached wishlist: $e');
       return [];
     }
   }
 
-  Future<void> saveRecentSearches(List<String> recentSearches) async {
+  Future<void> cacheWishlist(List<String> wishlistedPGIds) async {
+    await _ensureInitialized();
+
     try {
-      await _userPreferencesBox.put('recent_searches', recentSearches);
+      await _userPreferencesBox.put('wishlist', wishlistedPGIds);
     } catch (e) {
-      debugPrint('❌ Error saving recent searches: $e');
+      debugPrint('Error caching wishlist: $e');
     }
+  }
+
+  Future<void> cachePGs(List<PGProperty> pgList) async {
+    await _ensureInitialized();
+
+    try {
+      await _cachedDataBox.put('pgList', pgList);
+    } catch (e) {
+      debugPrint('Error caching PGs: $e');
+    }
+  }
+
+  bool isPGCacheValid() {
+    try {
+      final pgList = _cachedDataBox.get('pgList');
+      if (pgList != null && pgList is List<PGProperty>) {
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error checking PG cache: $e');
+    }
+
+    return false;
+  }
+
+  Future getCachedPGs() async {
+    await _ensureInitialized();
+
+    try {
+      final pgList = _cachedDataBox.get('pgList');
+      if (pgList != null && pgList is List<PGProperty>) {
+        return pgList;
+      }
+    } catch (e) {
+      debugPrint('Error getting cached PGs: $e');
+    }
+  }
+
+  Future<void> clearAllData() async {
+    await _cachedDataBox.clear();
   }
 }
