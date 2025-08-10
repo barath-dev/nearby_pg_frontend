@@ -554,7 +554,7 @@ class _LoginScreenState extends State<LoginScreen>
                   color: AppTheme.emeraldGreen.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
+                child: const Text(
                   '+91',
                   style: TextStyle(
                     color: AppTheme.emeraldGreen,
@@ -590,7 +590,7 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
+                borderSide: const BorderSide(
                   color: AppTheme.emeraldGreen,
                   width: 2,
                 ),
@@ -639,7 +639,7 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             child: Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.error_outline,
                   color: AppTheme.error,
                   size: 20,

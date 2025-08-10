@@ -2,12 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:card_swiper/card_swiper.dart';
+import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:math' as math;
 
 // Import providers and models
 import '../providers/home_provider.dart';
 import '../../../shared/models/app_models.dart';
-import '../../../shared/widgets/pg_card.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 
@@ -27,16 +28,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
   late Animation<double> _scaleAnimation;
+  late TabController _tabController;
 
   bool _isHeaderExpanded = true;
+  int _currentCategory = 0;
+
+  final List<Map<String, dynamic>> _categories = [
+    {'icon': Icons.home_filled, 'label': 'All'},
+    {'icon': Icons.apartment, 'label': 'Single'},
+    {'icon': Icons.group, 'label': 'Shared'},
+    {'icon': Icons.hotel, 'label': 'Deluxe'},
+    {'icon': Icons.location_city, 'label': 'Family'},
+  ];
 
   @override
   void initState() {
     super.initState();
 
+    // Set system UI overlay style
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
+
     // Initialize animation controllers
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
 
@@ -44,6 +63,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+
+    _tabController = TabController(length: 3, vsync: this);
 
     // Initialize animations
     _fadeAnimation = Tween<double>(
@@ -55,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ));
 
     _slideAnimation = Tween<double>(
-      begin: 50.0,
+      begin: 30.0,
       end: 0.0,
     ).animate(CurvedAnimation(
       parent: _animationController,
@@ -63,11 +84,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ));
 
     _scaleAnimation = Tween<double>(
-      begin: 0.8,
+      begin: 0.9,
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _animationController,
-      curve: const Interval(0.4, 1.0, curve: Curves.elasticOut),
+      curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
     ));
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -85,13 +106,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _searchController.dispose();
     _animationController.dispose();
     _headerAnimationController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
   void _onScroll() {
     // Header collapse animation
     final offset = _scrollController.offset;
-    final shouldExpand = offset < 100;
+    final shouldExpand = offset < 50;
 
     if (shouldExpand != _isHeaderExpanded) {
       setState(() {
@@ -122,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFB),
+      backgroundColor: const Color(0xFFFAFAFC),
       body: Consumer<HomeProvider>(
         builder: (context, provider, child) {
           return RefreshIndicator(
@@ -145,59 +167,74 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return CustomScrollView(
       slivers: [
         // Enhanced shimmer app bar
-        SliverAppBar(
+        const SliverAppBar(
           backgroundColor: Colors.white,
           elevation: 0,
           pinned: true,
-          expandedHeight: 200,
-          flexibleSpace: FlexibleSpaceBar(
-            background: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white,
-                    Colors.grey[50]!,
-                  ],
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        _buildShimmerBox(140, 28, radius: 6),
-                        const Spacer(),
-                        _buildShimmerBox(44, 44, radius: 22),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _buildShimmerBox(180, 16, radius: 4),
-                    const SizedBox(height: 24),
-                    _buildShimmerBox(double.infinity, 52, radius: 16),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          expandedHeight: 0,
+          toolbarHeight: 0,
         ),
 
         // Enhanced content shimmer
         SliverPadding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
+              const SizedBox(height: 60),
+
+              // App header shimmer
+              Row(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildShimmerBox(150, 28, radius: 8),
+                      const SizedBox(height: 8),
+                      _buildShimmerBox(100, 16, radius: 4),
+                    ],
+                  ),
+                  const Spacer(),
+                  _buildShimmerCircle(48),
+                ],
+              ),
+
+              const SizedBox(height: 32),
+
+              // Search box shimmer
+              _buildShimmerBox(double.infinity, 60, radius: 16),
+
+              const SizedBox(height: 32),
+
+              // Category shimmer
+              SizedBox(
+                height: 80,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: 5,
+                  itemBuilder: (context, index) => Container(
+                    width: 70,
+                    margin: const EdgeInsets.only(right: 16),
+                    child: Column(
+                      children: [
+                        _buildShimmerCircle(48),
+                        const SizedBox(height: 8),
+                        _buildShimmerBox(60, 12, radius: 4),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
               // Premium banner shimmer
-              _buildShimmerBox(double.infinity, 180, radius: 20),
-              const SizedBox(height: 40),
+              _buildShimmerBox(double.infinity, 180, radius: 24),
+              const SizedBox(height: 32),
 
               // Section header
               Row(
                 children: [
-                  _buildShimmerBox(100, 24, radius: 6),
+                  _buildShimmerBox(120, 24, radius: 6),
                   const Spacer(),
                   _buildShimmerBox(60, 20, radius: 4),
                 ],
@@ -213,12 +250,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   itemBuilder: (context, index) => Container(
                     width: 240,
                     margin: const EdgeInsets.only(right: 16),
-                    child: _buildShimmerBox(240, 300, radius: 20),
+                    child: _buildShimmerBox(240, 300, radius: 24),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 32),
               _buildShimmerBox(120, 24, radius: 6),
               const SizedBox(height: 20),
 
@@ -228,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   (index) => Padding(
                         padding: const EdgeInsets.only(bottom: 20),
                         child:
-                            _buildShimmerBox(double.infinity, 140, radius: 16),
+                            _buildShimmerBox(double.infinity, 140, radius: 20),
                       )),
             ]),
           ),
@@ -256,6 +293,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildShimmerCircle(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: const Alignment(-1.0, 0.0),
+          end: const Alignment(1.0, 0.0),
+          colors: [
+            Colors.grey[200]!,
+            Colors.grey[100]!,
+            Colors.grey[200]!,
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildErrorState(HomeProvider provider) {
     return Center(
       child: Padding(
@@ -267,14 +323,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.red.withOpacity(0.1),
-                    Colors.red.withOpacity(0.05),
-                  ],
-                ),
+                color: Colors.red[50],
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
@@ -308,16 +357,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 40),
-            _buildPremiumButton(
+            _buildPrimaryButton(
               onPressed: () => provider.initialize(),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.refresh, size: 20),
-                  SizedBox(width: 8),
-                  Text('Try Again'),
-                ],
-              ),
+              label: 'Try Again',
+              icon: Icons.refresh,
             ),
           ],
         ),
@@ -337,40 +380,69 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               controller: _scrollController,
               physics: const BouncingScrollPhysics(),
               slivers: [
-                // Premium App Bar
-                _buildPremiumAppBar(provider),
+                // Transparent AppBar for status bar spacing
+                const SliverAppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  toolbarHeight: 0,
+                  pinned: true,
+                ),
 
-                // Location indicator with animation
-                if (provider.currentLocationName.isNotEmpty)
-                  SliverToBoxAdapter(
-                    child: Transform.scale(
-                      scale: _scaleAnimation.value,
-                      child: _buildLocationBar(provider),
-                    ),
-                  ),
-
+                // Main content
                 SliverPadding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
+                      const SizedBox(height: 20),
+
+                      // Header
+                      _buildModernHeader(provider),
+
+                      const SizedBox(height: 32),
+
+                      // Search Bar
+                      _buildModernSearchBar(provider),
+
+                      const SizedBox(height: 32),
+
+                      // Categories
+                      _buildCategories(),
+
+                      const SizedBox(height: 32),
+
                       // Premium banners
                       if (provider.banners.isNotEmpty) ...[
-                        _buildPremiumBanners(provider),
-                        const SizedBox(height: 40),
+                        _buildModernBanners(provider),
+                        const SizedBox(height: 32),
                       ],
 
                       // Featured PGs with enhanced design
                       if (provider.featuredPGs.isNotEmpty) ...[
-                        _buildPremiumSectionHeader(
-                            '✨ Featured', 'Premium selections'),
+                        _buildModernSectionHeader(
+                          'Featured Properties',
+                          'Handpicked for you',
+                          onViewAll: () {
+                            // Navigate to view all featured PGs
+                          },
+                        ),
                         const SizedBox(height: 20),
-                        _buildFeaturedPGs(provider),
-                        const SizedBox(height: 40),
+                        _buildModernFeaturedPGs(provider),
+                        const SizedBox(height: 32),
                       ],
 
+                      // Tab control for different PG types
+                      _buildTabControl(),
+
+                      const SizedBox(height: 20),
+
                       // Nearby PGs header
-                      _buildPremiumSectionHeader(
-                          '📍 Near You', 'Available now'),
+                      _buildModernSectionHeader(
+                        'Nearby Accommodations',
+                        'Available in your area',
+                        onViewAll: () {
+                          // Navigate to view all nearby PGs
+                        },
+                      ),
                       const SizedBox(height: 20),
                     ]),
                   ),
@@ -391,168 +463,101 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildPremiumAppBar(HomeProvider provider) {
-    return SliverAppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      pinned: true,
-      expandedHeight: 200,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white,
-                AppTheme.emeraldGreen.withOpacity(0.02),
+  Widget _buildModernHeader(HomeProvider provider) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Find Your Perfect Stay',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF1E293B),
+                      letterSpacing: -0.5,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                provider.currentLocationName.isNotEmpty
+                    ? 'in ${provider.currentLocationName}'
+                    : 'Discover amazing places around you',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ],
+          ),
+        ),
+        GestureDetector(
+          onTap: () {
+            // Navigate to profile or notifications
+          },
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.grey[100]!,
+                width: 1,
+              ),
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(
+                  Icons.notifications_outlined,
+                  color: Color(0xFF1E293B),
+                  size: 24,
+                ),
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.red[400],
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Premium header row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        AppTheme.emeraldGreen,
-                                        AppTheme.emeraldGreen.withOpacity(0.8),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    'NEARBY',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelSmall
-                                        ?.copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 1.5,
-                                        ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Find Your Perfect Stay',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall
-                                  ?.copyWith(
-                                    color: Colors.grey[800],
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Discover amazing places around you',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      _buildPremiumNotificationButton(),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Premium search bar
-                  _buildPremiumSearchBar(provider),
-                ],
-              ),
-            ),
-          ),
         ),
-        collapseMode: CollapseMode.parallax,
-      ),
+      ],
     );
   }
 
-  Widget _buildPremiumNotificationButton() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: IconButton(
-        onPressed: () {
-          // Navigate to notifications
-        },
-        icon: Stack(
-          children: [
-            const Icon(
-              Icons.notifications_none_rounded,
-              color: Colors.black87,
-              size: 24,
-            ),
-            Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: Colors.red[400],
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ],
-        ),
-        style: IconButton.styleFrom(
-          padding: const EdgeInsets.all(12),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPremiumSearchBar(HomeProvider provider) {
+  Widget _buildModernSearchBar(HomeProvider provider) {
     return GestureDetector(
       onTap: () {
         Navigator.pushNamed(context, AppConstants.searchRoute);
       },
       child: Container(
-        height: 56,
+        height: 60,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey[200]!),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              blurRadius: 15,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -560,172 +565,151 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           children: [
             const SizedBox(width: 20),
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: AppTheme.emeraldGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.search,
                 color: AppTheme.emeraldGreen,
-                size: 20,
+                size: 22,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
-                'Search locations, PGs...',
+                'Search for locations, PGs...',
                 style: TextStyle(
-                  color: Colors.grey[500],
+                  color: Colors.grey[400],
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
                 ),
               ),
             ),
-            if (provider.isLocationLoading) ...[
-              Container(
-                width: 20,
-                height: 20,
-                margin: const EdgeInsets.only(right: 20),
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    AppTheme.emeraldGreen,
-                  ),
-                ),
+            Container(
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.only(right: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
               ),
-            ] else ...[
-              Container(
-                margin: const EdgeInsets.only(right: 16),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.tune, size: 16, color: Colors.grey[600]),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Filter',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+              child: Icon(
+                Icons.tune,
+                color: Colors.grey[600],
+                size: 20,
               ),
-            ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLocationBar(HomeProvider provider) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.emeraldGreen.withOpacity(0.1),
-            AppTheme.emeraldGreen.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppTheme.emeraldGreen.withOpacity(0.2),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: AppTheme.emeraldGreen,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.location_on,
-              size: 16,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Current Location',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppTheme.emeraldGreen.withOpacity(0.8),
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-                Text(
-                  provider.currentLocationName,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.emeraldGreen,
-                        fontWeight: FontWeight.w600,
-                      ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          _buildPremiumButton(
-            onPressed: () {
-              // Change location logic
-            },
-            child: const Text('Change'),
-            isSecondary: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPremiumBanners(HomeProvider provider) {
+  Widget _buildCategories() {
     return SizedBox(
-      height: 200,
+      height: 90,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: _categories.length,
+        itemBuilder: (context, index) {
+          final isSelected = _currentCategory == index;
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _currentCategory = index;
+              });
+            },
+            child: Container(
+              width: 70,
+              margin: EdgeInsets.only(
+                right: index == _categories.length - 1 ? 0 : 24,
+              ),
+              child: Column(
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppTheme.emeraldGreen : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isSelected
+                              ? AppTheme.emeraldGreen.withOpacity(0.3)
+                              : Colors.black.withOpacity(0.04),
+                          blurRadius: 15,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      _categories[index]['icon'],
+                      color:
+                          isSelected ? Colors.white : const Color(0xFF64748B),
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _categories[index]['label'],
+                    style: TextStyle(
+                      color: isSelected
+                          ? const Color(0xFF1E293B)
+                          : const Color(0xFF64748B),
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildModernBanners(HomeProvider provider) {
+    return SizedBox(
+      height: 180,
       child: Swiper(
         itemBuilder: (context, index) =>
-            _buildPremiumBannerItem(provider.banners[index]),
+            _buildModernBannerItem(provider.banners[index]),
         itemCount: provider.banners.length,
-        viewportFraction: 0.95,
-        scale: 0.95,
+        viewportFraction: 0.85,
+        scale: 0.9,
         autoplay: true,
         autoplayDelay: 5000,
         pagination: SwiperPagination(
           builder: DotSwiperPaginationBuilder(
             color: Colors.white.withOpacity(0.5),
             activeColor: Colors.white,
-            size: 8.0,
-            activeSize: 10.0,
-            space: 6.0,
+            size: 6.0,
+            activeSize: 8.0,
+            space: 4.0,
           ),
-          margin: const EdgeInsets.only(bottom: 20),
+          alignment: Alignment.bottomRight,
+          margin: const EdgeInsets.only(bottom: 16, right: 20),
         ),
       ),
     );
   }
 
-  Widget _buildPremiumBannerItem(PromotionalBanner banner) {
+  Widget _buildModernBannerItem(PromotionalBanner banner) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      margin: const EdgeInsets.only(right: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -733,114 +717,128 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(24),
         child: Stack(
           children: [
-            // Background image with parallax effect
-            Image.network(
-              banner.imageUrl,
+            // Background image
+            CachedNetworkImage(
+              imageUrl: banner.imageUrl,
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppTheme.emeraldGreen,
-                        AppTheme.emeraldGreen.withOpacity(0.8),
-                      ],
-                    ),
+              placeholder: (context, url) => Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.grey[200]!,
+                      Colors.grey[300]!,
+                    ],
                   ),
-                  child: Center(
-                    child: Icon(
-                      Icons.image_outlined,
-                      color: Colors.white.withOpacity(0.7),
-                      size: 60,
-                    ),
+                ),
+              ),
+              errorWidget: (context, url, error) => Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppTheme.emeraldGreen.withOpacity(0.8),
+                      AppTheme.emeraldGreen,
+                    ],
                   ),
-                );
-              },
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.image_outlined,
+                    color: Colors.white.withOpacity(0.7),
+                    size: 40,
+                  ),
+                ),
+              ),
             ),
 
-            // Sophisticated gradient overlay
+            // Gradient overlay
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.0),
+                    Colors.black.withOpacity(0.4),
                     Colors.black.withOpacity(0.7),
                   ],
-                  stops: const [0.0, 0.5, 1.0],
+                  stops: const [0.0, 0.6, 1.0],
                 ),
               ),
             ),
 
-            // Content with enhanced typography
+            // Content
             Positioned(
-              bottom: 24,
-              left: 24,
-              right: 24,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (banner.description.isNotEmpty) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        border:
-                            Border.all(color: Colors.white.withOpacity(0.3)),
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (banner.description.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          banner.description.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1,
+                          ),
+                        ),
                       ),
-                      child: Text(
-                        banner.description.toUpperCase(),
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.2,
-                            ),
+                      const SizedBox(height: 10),
+                    ],
+                    Text(
+                      banner.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        height: 1.3,
                       ),
                     ),
-                    const SizedBox(height: 12),
                   ],
-                  Text(
-                    banner.title,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          height: 1.2,
-                        ),
-                  ),
-                ],
+                ),
               ),
             ),
 
-            // Floating action button
+            // Action button
             Positioned(
-              top: 20,
-              right: 20,
+              top: 16,
+              right: 16,
               child: Container(
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.3),
+                    width: 1,
+                  ),
                 ),
-                child: IconButton(
-                  onPressed: () {
-                    // Handle banner action
-                  },
-                  icon: const Icon(
-                    Icons.arrow_forward,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  style: IconButton.styleFrom(
-                    padding: const EdgeInsets.all(8),
-                  ),
+                child: const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Colors.white,
+                  size: 18,
                 ),
               ),
             ),
@@ -850,7 +848,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildPremiumSectionHeader(String title, String subtitle) {
+  Widget _buildModernSectionHeader(
+    String title,
+    String subtitle, {
+    VoidCallback? onViewAll,
+  }) {
     return Row(
       children: [
         Expanded(
@@ -859,40 +861,99 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             children: [
               Text(
                 title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
-                    ),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1E293B),
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.grey[600],
+                ),
               ),
             ],
           ),
         ),
-        _buildPremiumButton(
-          onPressed: () {
-            // Navigate to view all
-          },
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('View All'),
-              SizedBox(width: 4),
-              Icon(Icons.arrow_forward, size: 16),
-            ],
+        if (onViewAll != null)
+          GestureDetector(
+            onTap: onViewAll,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'View All',
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 12,
+                    color: Colors.grey[700],
+                  ),
+                ],
+              ),
+            ),
           ),
-          isSecondary: true,
-        ),
       ],
     );
   }
 
-  Widget _buildFeaturedPGs(HomeProvider provider) {
+  Widget _buildTabControl() {
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicator: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        labelColor: AppTheme.emeraldGreen,
+        unselectedLabelColor: Colors.grey[600],
+        labelStyle: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 14,
+        ),
+        tabs: const [
+          Tab(text: 'Recommended'),
+          Tab(text: 'Newest'),
+          Tab(text: 'Price'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernFeaturedPGs(HomeProvider provider) {
     return SizedBox(
       height: 320,
       child: ListView.builder(
@@ -902,11 +963,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         itemBuilder: (context, index) {
           final pg = provider.featuredPGs[index];
           return Container(
-            width: 260,
+            width: 250,
             margin: EdgeInsets.only(
               right: index == provider.featuredPGs.length - 1 ? 0 : 20,
             ),
-            child: _buildEnhancedPGCard(
+            child: _buildModernPGCard(
               pg: pg,
               onTap: () => _navigateToPGDetail(pg.id),
               isWishlisted: provider.isWishlisted(pg.id),
@@ -922,7 +983,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildNearbyPGsList(HomeProvider provider) {
     if (provider.nearbyPGs.isEmpty) {
       return SliverToBoxAdapter(
-        child: _buildEnhancedEmptyState(),
+        child: _buildModernEmptyState(),
       );
     }
 
@@ -935,27 +996,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               final pg = provider.nearbyPGs[index];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 20),
-                child: _buildEnhancedPGCard(
+                child: _buildModernPGCard(
                   pg: pg,
                   onTap: () => _navigateToPGDetail(pg.id),
                   isWishlisted: provider.isWishlisted(pg.id),
                   onWishlistTap: () => provider.toggleWishlist(pg.id),
+                  isHorizontal: true,
                   showDistance: true,
                 ),
               );
             } else if (provider.isLoadingMore) {
-              return Container(
-                padding: const EdgeInsets.symmetric(vertical: 40),
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 30),
                 child: Center(
                   child: Container(
                     width: 50,
                     height: 50,
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(25),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: AppTheme.emeraldGreen.withOpacity(0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -980,306 +1043,373 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildEnhancedPGCard({
+  Widget _buildModernPGCard({
     required PGProperty pg,
     required VoidCallback onTap,
     required bool isWishlisted,
     required VoidCallback onWishlistTap,
     bool isFeatured = false,
+    bool isHorizontal = false,
     bool showDistance = false,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        height: isHorizontal ? 130 : null,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Enhanced image section
-              Container(
-                height: isFeatured ? 180 : 160,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.grey[200]!,
-                      Colors.grey[100]!,
+          borderRadius: BorderRadius.circular(24),
+          child: isHorizontal
+              ? _buildHorizontalPGCard(
+                  pg: pg,
+                  isWishlisted: isWishlisted,
+                  onWishlistTap: onWishlistTap,
+                  showDistance: showDistance,
+                )
+              : _buildVerticalPGCard(
+                  pg: pg,
+                  isWishlisted: isWishlisted,
+                  onWishlistTap: onWishlistTap,
+                  isFeatured: isFeatured,
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVerticalPGCard({
+    required PGProperty pg,
+    required bool isWishlisted,
+    required VoidCallback onWishlistTap,
+    bool isFeatured = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Image section
+        Stack(
+          children: [
+            // PG Image
+            Container(
+              height: 170,
+              width: double.infinity,
+              color: Colors.grey[200],
+              child: CachedNetworkImage(
+                imageUrl: pg.images.isNotEmpty
+                    ? pg.images.first
+                    : 'https://via.placeholder.com/300',
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Center(
+                  child: SizedBox(
+                    width: 30,
+                    height: 30,
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Colors.grey[400]!,
+                      ),
+                      strokeWidth: 2,
+                    ),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Icon(
+                  Icons.home_outlined,
+                  size: 60,
+                  color: Colors.grey[400],
+                ),
+              ),
+            ),
+
+            // Top actions
+            Positioned(
+              top: 12,
+              left: 12,
+              right: 12,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Rating badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.star_rounded,
+                          size: 16,
+                          color: Colors.amber[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          pg.rating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            color: Color(0xFF1E293B),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Wishlist button
+                  GestureDetector(
+                    onTap: onWishlistTap,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        isWishlisted
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_outline_rounded,
+                        color:
+                            isWishlisted ? Colors.red[400] : Colors.grey[700],
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Bottom tags
+            if (isFeatured)
+              Positioned(
+                bottom: 12,
+                left: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.emeraldGreen,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.verified,
+                        size: 14,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'FEATURED',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    // PG Image (placeholder for now)
-                    Container(
-                      width: double.infinity,
-                      height: double.infinity,
-                      color: Colors.grey[200],
-                      child: Icon(
-                        Icons.home_outlined,
-                        size: 60,
-                        color: Colors.grey[400],
-                      ),
-                    ),
+              ),
+          ],
+        ),
 
-                    // Gradient overlay
-                    Container(
+        // Content section
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // PG Name
+              Text(
+                pg.name,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1E293B),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              const SizedBox(height: 8),
+
+              // Location
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 14,
+                    color: Colors.grey[500],
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      pg.area,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // Amenities row
+              Row(
+                children: [
+                  ...List.generate(
+                    math.min(3, pg.amenities.length),
+                    (index) => Container(
+                      margin: EdgeInsets.only(right: index < 2 ? 8 : 0),
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withOpacity(0.1),
-                          ],
+                        color: AppTheme.emeraldGreen.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        _getAmenityIcon(pg.amenities[index]),
+                        size: 16,
+                        color: AppTheme.emeraldGreen,
+                      ),
+                    ),
+                  ),
+                  if (pg.amenities.length > 3) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '+${pg.amenities.length - 3}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
                         ),
                       ),
                     ),
-
-                    // Top actions
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      right: 12,
-                      child: Row(
-                        children: [
-                          if (isFeatured) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.orange,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                'Featured',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelSmall
-                                    ?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                            ),
-                          ],
-                          const Spacer(),
-                          GestureDetector(
-                            onTap: onWishlistTap,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                isWishlisted
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                color: isWishlisted
-                                    ? Colors.red
-                                    : Colors.grey[600],
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Bottom info overlay
-                    if (showDistance) ...[
-                      Positioned(
-                        bottom: 12,
-                        left: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.location_on,
-                                size: 14,
-                                color: AppTheme.emeraldGreen,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                pg.area,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelSmall
-                                    ?.copyWith(
-                                      color: AppTheme.emeraldGreen,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
+                  const Spacer(),
+                  Text(
+                    '₹${pg.price}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.emeraldGreen,
+                    ),
+                  ),
+                  Text(
+                    '/mo',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHorizontalPGCard({
+    required PGProperty pg,
+    required bool isWishlisted,
+    required VoidCallback onWishlistTap,
+    bool showDistance = false,
+  }) {
+    return Row(
+      children: [
+        // Image container
+        Container(
+          width: 130,
+          height: double.infinity,
+          color: Colors.grey[200],
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // PG Image
+              CachedNetworkImage(
+                imageUrl: pg.images.isNotEmpty
+                    ? pg.images.first
+                    : 'https://via.placeholder.com/300',
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Colors.grey[400]!,
+                      ),
+                      strokeWidth: 2,
+                    ),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Icon(
+                  Icons.home_outlined,
+                  size: 40,
+                  color: Colors.grey[400],
                 ),
               ),
 
-              // Enhanced content section
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              // Rating badge
+              Positioned(
+                top: 8,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // PG Name and rating
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              pg.name,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.star,
-                                  size: 14,
-                                  color: Colors.orange[600],
-                                ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  pg.rating.toStringAsFixed(1),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelSmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.green[700],
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      Icon(
+                        Icons.star_rounded,
+                        size: 12,
+                        color: Colors.amber[600],
                       ),
-
-                      const SizedBox(height: 8),
-
-                      // Location
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 16,
-                            color: Colors.grey[500],
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              pg.address,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const Spacer(),
-
-                      // Price and amenities
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppTheme.emeraldGreen.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.currency_rupee,
-                                  size: 16,
-                                  color: AppTheme.emeraldGreen,
-                                ),
-                                Text(
-                                  '${pg.price}+',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleSmall
-                                      ?.copyWith(
-                                        color: AppTheme.emeraldGreen,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                ),
-                                Text(
-                                  '/mo',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelSmall
-                                      ?.copyWith(
-                                        color: AppTheme.emeraldGreen
-                                            .withOpacity(0.8),
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                          ...pg.amenities.take(2).map((amenity) => Padding(
-                                padding: const EdgeInsets.only(left: 4),
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[100],
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Icon(
-                                    _getAmenityIcon(amenity),
-                                    size: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              )),
-                        ],
+                      const SizedBox(width: 2),
+                      Text(
+                        pg.rating.toStringAsFixed(1),
+                        style: const TextStyle(
+                          color: Color(0xFF1E293B),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10,
+                        ),
                       ),
                     ],
                   ),
@@ -1288,40 +1418,155 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
         ),
-      ),
+
+        // Content container
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top row with title and wishlist
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        pg.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E293B),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: onWishlistTap,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          isWishlisted
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_outline_rounded,
+                          color:
+                              isWishlisted ? Colors.red[400] : Colors.grey[600],
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // Location
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 14,
+                      color: Colors.grey[500],
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        pg.area,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const Spacer(),
+
+                // Price and amenities
+                Row(
+                  children: [
+                    Text(
+                      '₹${pg.price}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.emeraldGreen,
+                      ),
+                    ),
+                    Text(
+                      '/mo',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${pg.availableRooms} Rooms',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   IconData _getAmenityIcon(String amenity) {
-    switch (amenity.toLowerCase()) {
-      case 'wifi':
-        return Icons.wifi;
-      case 'parking':
-        return Icons.local_parking;
-      case 'laundry':
-        return Icons.local_laundry_service;
-      case 'food':
-        return Icons.restaurant;
-      default:
-        return Icons.check_circle_outline;
-    }
+    final amenityIcons = {
+      'WIFI': Icons.wifi,
+      'AC': Icons.ac_unit,
+      'MEALS': Icons.restaurant,
+      'LAUNDRY': Icons.local_laundry_service,
+      'PARKING': Icons.local_parking,
+      'GYM': Icons.fitness_center,
+      'SECURITY': Icons.security,
+      'HOUSEKEEPING': Icons.cleaning_services,
+      'HOT_WATER': Icons.water_drop,
+      'POWER_BACKUP': Icons.power,
+      'CCTV': Icons.videocam,
+      'STUDY_ROOM': Icons.book,
+      'RECREATION_ROOM': Icons.sports_esports,
+    };
+
+    return amenityIcons[amenity] ?? Icons.check_circle_outline;
   }
 
-  Widget _buildEnhancedEmptyState() {
+  Widget _buildModernEmptyState() {
     return Padding(
-      padding: const EdgeInsets.all(60),
+      padding: const EdgeInsets.all(40),
       child: Column(
         children: [
           Container(
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.grey[100]!,
-                  Colors.grey[50]!,
-                ],
-              ),
+              color: Colors.grey[50],
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -1342,61 +1587,70 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             'No PGs Found',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: Colors.grey[700],
+                  color: const Color(0xFF1E293B),
                 ),
           ),
           const SizedBox(height: 12),
           Text(
             'Try adjusting your location or\nsearch criteria to find more options',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.grey[500],
+                  color: Colors.grey[600],
                   height: 1.5,
                 ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-          _buildPremiumButton(
+          _buildPrimaryButton(
             onPressed: () {
               Navigator.pushNamed(context, AppConstants.searchRoute);
             },
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.search, size: 20),
-                SizedBox(width: 8),
-                Text('Search Again'),
-              ],
-            ),
+            label: 'Search Again',
+            icon: Icons.search,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPremiumButton({
+  Widget _buildPrimaryButton({
     required VoidCallback onPressed,
-    required Widget child,
-    bool isSecondary = false,
+    required String label,
+    IconData? icon,
+    bool isOutlined = false,
   }) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor:
-            isSecondary ? Colors.transparent : AppTheme.emeraldGreen,
-        foregroundColor: isSecondary ? AppTheme.emeraldGreen : Colors.white,
-        elevation: isSecondary ? 0 : 8,
-        shadowColor: isSecondary
+        backgroundColor: isOutlined ? Colors.white : AppTheme.emeraldGreen,
+        foregroundColor: isOutlined ? AppTheme.emeraldGreen : Colors.white,
+        elevation: isOutlined ? 0 : 8,
+        shadowColor: isOutlined
             ? Colors.transparent
             : AppTheme.emeraldGreen.withOpacity(0.3),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: isSecondary
-              ? BorderSide(color: AppTheme.emeraldGreen.withOpacity(0.3))
+          borderRadius: BorderRadius.circular(16),
+          side: isOutlined
+              ? const BorderSide(color: AppTheme.emeraldGreen)
               : BorderSide.none,
         ),
       ),
-      child: child,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 20),
+            const SizedBox(width: 8),
+          ],
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

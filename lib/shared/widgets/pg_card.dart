@@ -6,9 +6,6 @@ import 'package:shimmer/shimmer.dart';
 
 import '../models/app_models.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/constants/app_constants.dart';
-import '../../features/profile/providers/profile_provider.dart';
-import '../../features/search/providers/search_provider.dart';
 
 /// PG Card variants for different layouts
 enum PGCardVariant {

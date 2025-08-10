@@ -1,11 +1,9 @@
 // lib/features/home/providers/home_provider.dart
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 
 // Import models and services
 import '../../../shared/models/app_models.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/cache_service.dart';

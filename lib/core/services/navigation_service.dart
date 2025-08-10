@@ -1,9 +1,14 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:water_drop_nav_bar/water_drop_nav_bar.dart';
 import 'package:nearby_pg/features/auth/screens/login_screen.dart';
 import 'package:nearby_pg/features/auth/screens/signup_screen.dart';
 import 'package:nearby_pg/features/offers/screens/offers_screen.dart';
+
+// Import shared widgets
+import '../../shared/widgets/splash_screen.dart';
 
 // Import your screens
 import '../../features/home/screens/home_screen.dart';
@@ -46,7 +51,13 @@ class NavigationService {
       GoRoute(
         path: '/splash',
         name: 'splash',
-        builder: (context, state) => const SplashScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const SplashScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
       ),
 
       // Shell route for bottom navigation
@@ -67,8 +78,13 @@ class NavigationService {
           GoRoute(
             path: '/',
             name: AppConstants.homeRoute,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: HomeScreen(),
+            pageBuilder: (context, state) => CustomTransitionPage<void>(
+              key: state.pageKey,
+              child: const HomeScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
             ),
           ),
 
@@ -76,8 +92,13 @@ class NavigationService {
           GoRoute(
             path: '/search',
             name: AppConstants.searchRoute,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: SearchScreen(),
+            pageBuilder: (context, state) => CustomTransitionPage<void>(
+              key: state.pageKey,
+              child: const SearchScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
             ),
           ),
 
@@ -85,8 +106,13 @@ class NavigationService {
           GoRoute(
             path: '/offers',
             name: AppConstants.offersRoute,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: OffersScreen(),
+            pageBuilder: (context, state) => CustomTransitionPage<void>(
+              key: state.pageKey,
+              child: const OffersScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
             ),
           ),
 
@@ -94,8 +120,13 @@ class NavigationService {
           GoRoute(
             path: '/profile',
             name: AppConstants.profileRoute,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ProfileScreen(),
+            pageBuilder: (context, state) => CustomTransitionPage<void>(
+              key: state.pageKey,
+              child: const ProfileScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
             ),
           ),
         ],
@@ -106,9 +137,25 @@ class NavigationService {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/pg/:id',
         name: AppConstants.pgDetailRoute,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final pgId = state.pathParameters['id']!;
-          return PGDetailScreen(pgId: pgId);
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: PGDetailScreen(pgId: pgId),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              );
+            },
+          );
         },
       ),
 
@@ -117,9 +164,25 @@ class NavigationService {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/booking/:pgId',
         name: 'booking',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final pgId = state.pathParameters['pgId']!;
-          return BookingScreen(pgId: pgId);
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: BookingScreen(pgId: pgId),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              );
+            },
+          );
         },
       ),
 
@@ -128,7 +191,22 @@ class NavigationService {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/settings',
         name: 'settings',
-        builder: (context, state) => const SettingsScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const SettingsScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
+              child: child,
+            );
+          },
+        ),
       ),
 
       // Wishlist route
@@ -136,7 +214,22 @@ class NavigationService {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/wishlist',
         name: 'wishlist',
-        builder: (context, state) => const WishlistScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const WishlistScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
+              child: child,
+            );
+          },
+        ),
       ),
 
       // Map view route
@@ -144,7 +237,22 @@ class NavigationService {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/map',
         name: 'map',
-        builder: (context, state) => const MapViewScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const MapViewScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
+              child: child,
+            );
+          },
+        ),
       ),
 
       // Filter route
@@ -152,7 +260,22 @@ class NavigationService {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/filter',
         name: 'filter',
-        builder: (context, state) => const FilterScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const FilterScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
+              child: child,
+            );
+          },
+        ),
       ),
 
       // Auth routes
@@ -160,8 +283,21 @@ class NavigationService {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/login',
         name: AppConstants.loginRoute,
-        pageBuilder: (context, state) => const NoTransitionPage(
-          child: LoginScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const LoginScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
+              child: child,
+            );
+          },
         ),
       ),
 
@@ -169,8 +305,21 @@ class NavigationService {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/signup',
         name: AppConstants.signupRoute,
-        pageBuilder: (context, state) => const NoTransitionPage(
-          child: SignupScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const SignupScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
+              child: child,
+            );
+          },
         ),
       ),
 
@@ -179,11 +328,27 @@ class NavigationService {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/otp',
         name: AppConstants.otpRoute,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          return OTPScreen(
-            phoneNumber: extra?['phoneNumber'] ?? '',
-            isSignup: extra?['isSignup'] ?? false,
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: OTPScreen(
+              phoneNumber: extra?['phoneNumber'] ?? '',
+              isSignup: extra?['isSignup'] ?? false,
+            ),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              );
+            },
           );
         },
       ),
@@ -203,31 +368,64 @@ class NavigationService {
       return MaterialPage(
         key: state.pageKey,
         child: Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Page not found',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'The requested page does not exist.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => context.go('/'),
-                  child: const Text('Go Home'),
-                ),
-              ],
+          body: SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    'assets/images/error.png', // Ensure you have this asset
+                    width: 150,
+                    height: 150,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.error_outline,
+                      size: 100,
+                      color: Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    '404',
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                          color: AppTheme.emeraldGreen,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Page not found',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[800],
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'The page you are looking for doesn\'t exist or has been moved.',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton.icon(
+                    onPressed: () => context.go('/'),
+                    icon: const Icon(Icons.home),
+                    label: const Text('Go Home'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.emeraldGreen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -381,15 +579,31 @@ class NavigationService {
   }) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: onOkPressed ?? () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
+      builder: (context) => FeedbackDialog(
+        title: title,
+        message: message,
+        icon: Icons.check_circle,
+        iconColor: Colors.green,
+        onOkPressed: onOkPressed ?? () => Navigator.of(context).pop(),
+      ),
+    );
+  }
+
+  /// Show error dialog
+  static void showErrorDialog({
+    required BuildContext context,
+    required String title,
+    required String message,
+    VoidCallback? onOkPressed,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => FeedbackDialog(
+        title: title,
+        message: message,
+        icon: Icons.error_outline,
+        iconColor: Colors.red,
+        onOkPressed: onOkPressed ?? () => Navigator.of(context).pop(),
       ),
     );
   }
@@ -406,18 +620,32 @@ class NavigationService {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         title: Text(title),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(cancelText),
+            child: Text(
+              cancelText,
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: isDestructive
-                ? TextButton.styleFrom(foregroundColor: Colors.red)
-                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  isDestructive ? Colors.red : AppTheme.emeraldGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             child: Text(confirmText),
           ),
         ],
@@ -431,263 +659,50 @@ class NavigationService {
     required BuildContext context,
     required String message,
     bool isError = false,
+    IconData? icon,
+    Duration duration = const Duration(seconds: 3),
   }) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-}
-
-/// Updated Splash Screen with GoRouter integration
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _opacityAnimation;
-  late Animation<double> _textOpacityAnimation;
-  late Animation<double> _slideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _setupAnimations();
-    _configureSystemUI();
-    _checkAuthAndNavigate();
-  }
-
-  void _configureSystemUI() {
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: AppTheme.emeraldGreen,
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
-    );
-  }
-
-  void _setupAnimations() {
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 2500),
-      vsync: this,
-    );
-
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.5, curve: Curves.elasticOut),
-      ),
-    );
-
-    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.3, curve: Curves.easeIn),
-      ),
-    );
-
-    _textOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.4, 0.7, curve: Curves.easeIn),
-      ),
-    );
-
-    _slideAnimation = Tween<double>(begin: 20.0, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.4, 0.7, curve: Curves.easeOut),
-      ),
-    );
-
-    _animationController.forward();
-  }
-
-  void _checkAuthAndNavigate() async {
-    // Wait for splash duration
-    await Future.delayed(AppConstants.splashDuration);
-
-    if (mounted) {
-      // Navigate to home using GoRouter
-      NavigationService.navigateFromSplashToHome(context);
-    }
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppTheme.emeraldGreen, AppTheme.secondaryGreen],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Animated Logo
-                    Transform.scale(
-                      scale: _scaleAnimation.value,
-                      child: FadeTransition(
-                        opacity: _opacityAnimation,
-                        child: Container(
-                          padding: const EdgeInsets.all(32),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 30,
-                                offset: const Offset(0, 15),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // App Icon
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.emeraldGreen,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: const Icon(
-                                  Icons.home_work_rounded,
-                                  color: Colors.white,
-                                  size: 48,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-
-                              // App Name
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'NEARBY',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineMedium
-                                        ?.copyWith(
-                                          color: AppTheme.emeraldGreen,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 1.2,
-                                        ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.emeraldGreen,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      'PG',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    // Tagline
-                    FadeTransition(
-                      opacity: _textOpacityAnimation,
-                      child: Transform.translate(
-                        offset: Offset(0, _slideAnimation.value),
-                        child: Text(
-                          'Find Your Perfect PG',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w500,
-                              ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Subtitle
-                    FadeTransition(
-                      opacity: _textOpacityAnimation,
-                      child: Transform.translate(
-                        offset: Offset(0, _slideAnimation.value),
-                        child: Text(
-                          'Premium PG Discovery Platform',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyLarge
-                              ?.copyWith(color: Colors.white.withOpacity(0.8)),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 60),
-
-                    // Loading indicator
-                    FadeTransition(
-                      opacity: _textOpacityAnimation,
-                      child: const CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        strokeWidth: 3,
-                      ),
-                    ),
-                  ],
-                );
-              },
+        content: Row(
+          children: [
+            Icon(
+              icon ?? (isError ? Icons.error_outline : Icons.check_circle),
+              color: Colors.white,
+              size: 20,
             ),
-          ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: isError ? Colors.red.shade800 : AppTheme.emeraldGreen,
+        behavior: SnackBarBehavior.floating,
+        duration: duration,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        action: SnackBarAction(
+          label: 'DISMISS',
+          textColor: Colors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
         ),
       ),
     );
   }
 }
 
-/// Updated Main Navigation Wrapper to work with GoRouter
+/// Updated Main Navigation Wrapper with WaterDropNavBar
 class MainNavigationWrapper extends StatelessWidget {
   final Widget child;
   final int currentIndex;
@@ -703,57 +718,85 @@ class MainNavigationWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: child,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
+      body: Stack(
+        children: [
+          // Main content
+          child,
+
+          // Navigation bar
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: _buildWaterDropNavBar(context),
+          ),
+        ],
+      ),
+      extendBody: true, // Important for water drop effect
+    );
+  }
+
+  Widget _buildWaterDropNavBar(BuildContext context) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(20),
+        topRight: Radius.circular(20),
+      ),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.white.withOpacity(0.8),
+                Colors.white.withOpacity(0.9),
+              ],
             ),
-          ],
-        ),
-        child: SafeArea(
-          child: BottomNavigationBar(
-            currentIndex: currentIndex,
-            onTap: onTabTapped,
-            selectedItemColor: AppTheme.emeraldGreen,
-            unselectedItemColor: AppTheme.gray600,
-            type: BottomNavigationBarType.fixed,
-            elevation: 0,
-            backgroundColor: Colors.white,
-            selectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
             ),
-            unselectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 12,
-            ),
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home),
-                label: 'Home',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.search_outlined),
-                activeIcon: Icon(Icons.search),
-                label: 'Search',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.local_offer_outlined),
-                activeIcon: Icon(Icons.local_offer),
-                label: 'Offers',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person),
-                label: 'Profile',
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
               ),
             ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: WaterDropNavBar(
+                backgroundColor: Colors.transparent,
+                onItemSelected: onTabTapped,
+                selectedIndex: currentIndex,
+                waterDropColor: AppTheme.emeraldGreen,
+                inactiveIconColor: Colors.grey[600],
+                iconSize: 24,
+                barItems: [
+                  BarItem(
+                    filledIcon: Icons.home_rounded,
+                    outlinedIcon: Icons.home_outlined,
+                  ),
+                  BarItem(
+                    filledIcon: Icons.search_rounded,
+                    outlinedIcon: Icons.search_outlined,
+                  ),
+                  BarItem(
+                    filledIcon: Icons.local_offer_rounded,
+                    outlinedIcon: Icons.local_offer_outlined,
+                  ),
+                  BarItem(
+                    filledIcon: Icons.person_rounded,
+                    outlinedIcon: Icons.person_outline_rounded,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -793,60 +836,243 @@ class LoadingDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      child: Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2E7D32).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(30),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.9),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1.5,
               ),
-              child: const Center(
-                child: SizedBox(
-                  width: 30,
-                  height: 30,
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF2E7D32),
-                    strokeWidth: 3,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppTheme.emeraldGreen.withOpacity(0.1),
+                        AppTheme.emeraldGreen.withOpacity(0.2),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 30,
+                      height: 30,
+                      child: CircularProgressIndicator(
+                        color: AppTheme.emeraldGreen,
+                        strokeWidth: 3,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 20),
+                Text(
+                  'Please wait...',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF2E3A59),
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'We\'re processing your request',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Please wait...',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF2E3A59),
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'We\'re processing your request',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Reusable feedback dialog (for success and error)
+class FeedbackDialog extends StatelessWidget {
+  final String title;
+  final String message;
+  final IconData icon;
+  final Color iconColor;
+  final VoidCallback onOkPressed;
+
+  const FeedbackDialog({
+    super.key,
+    required this.title,
+    required this.message,
+    required this.icon,
+    required this.iconColor,
+    required this.onOkPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.9),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: iconColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    color: iconColor,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF2E3A59),
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Colors.grey[700],
+                        height: 1.5,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: onOkPressed,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.emeraldGreen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Extension methods for easier navigation
+extension NavigationExtension on BuildContext {
+  void navigateTo(String routeName, {Object? arguments}) {
+    goNamed(routeName, extra: arguments);
+  }
+
+  void showSnackBar(String message, {bool isError = false}) {
+    NavigationService.showSnackBar(
+      context: this,
+      message: message,
+      isError: isError,
+    );
+  }
+
+  void showLoading() {
+    NavigationService.showLoadingDialog(this);
+  }
+
+  void hideLoading() {
+    NavigationService.hideLoadingDialog(this);
+  }
+
+  void showSuccess(String title, String message, {VoidCallback? onOk}) {
+    NavigationService.showSuccessDialog(
+      context: this,
+      title: title,
+      message: message,
+      onOkPressed: onOk,
+    );
+  }
+
+  void showError(String title, String message, {VoidCallback? onOk}) {
+    NavigationService.showErrorDialog(
+      context: this,
+      title: title,
+      message: message,
+      onOkPressed: onOk,
+    );
+  }
+
+  Future<bool> showConfirmation(
+    String title,
+    String message, {
+    String confirmText = 'Confirm',
+    String cancelText = 'Cancel',
+    bool isDestructive = false,
+  }) {
+    return NavigationService.showConfirmationDialog(
+      context: this,
+      title: title,
+      message: message,
+      confirmText: confirmText,
+      cancelText: cancelText,
+      isDestructive: isDestructive,
     );
   }
 }
@@ -876,7 +1102,7 @@ class PGDetailScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text('PG Details for ID: $pgId'),
             const SizedBox(height: 8),
-            Text('Detailed view coming soon!'),
+            const Text('Detailed view coming soon!'),
           ],
         ),
       ),
@@ -908,7 +1134,7 @@ class BookingScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text('Booking for PG: $pgId'),
             const SizedBox(height: 8),
-            Text('Booking flow coming soon!'),
+            const Text('Booking flow coming soon!'),
           ],
         ),
       ),
@@ -1052,7 +1278,7 @@ class OTPScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text('OTP sent to +91 $phoneNumber'),
             const SizedBox(height: 8),
-            Text('OTP verification coming soon!'),
+            const Text('OTP verification coming soon!'),
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () => context.go('/'),
@@ -1061,55 +1287,6 @@ class OTPScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// Extension methods for easier navigation
-extension NavigationExtension on BuildContext {
-  void navigateTo(String routeName, {Object? arguments}) {
-    goNamed(routeName, extra: arguments);
-  }
-
-  void showSnackBar(String message, {bool isError = false}) {
-    NavigationService.showSnackBar(
-      context: this,
-      message: message,
-      isError: isError,
-    );
-  }
-
-  void showLoading() {
-    NavigationService.showLoadingDialog(this);
-  }
-
-  void hideLoading() {
-    NavigationService.hideLoadingDialog(this);
-  }
-
-  void showSuccess(String title, String message, {VoidCallback? onOk}) {
-    NavigationService.showSuccessDialog(
-      context: this,
-      title: title,
-      message: message,
-      onOkPressed: onOk,
-    );
-  }
-
-  Future<bool> showConfirmation(
-    String title,
-    String message, {
-    String confirmText = 'Confirm',
-    String cancelText = 'Cancel',
-    bool isDestructive = false,
-  }) {
-    return NavigationService.showConfirmationDialog(
-      context: this,
-      title: title,
-      message: message,
-      confirmText: confirmText,
-      cancelText: cancelText,
-      isDestructive: isDestructive,
     );
   }
 }

@@ -1,6 +1,7 @@
 // lib/shared/widgets/splash_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 
@@ -80,8 +81,8 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(AppConstants.splashDuration);
 
     if (mounted) {
-      // For the minimal app, skip authentication and go directly to home
-      Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
+      // CHANGED: Use GoRouter navigation instead of Navigator
+      context.go('/');
     }
   }
 
@@ -155,10 +156,10 @@ class _SplashScreenState extends State<SplashScreen>
                                     style: Theme.of(
                                       context,
                                     ).textTheme.headlineMedium?.copyWith(
-                                      color: AppTheme.emeraldGreen,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 1.2,
-                                    ),
+                                          color: AppTheme.emeraldGreen,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 1.2,
+                                        ),
                                   ),
                                   const SizedBox(width: 8),
                                   Container(
@@ -175,9 +176,9 @@ class _SplashScreenState extends State<SplashScreen>
                                       style: Theme.of(
                                         context,
                                       ).textTheme.titleLarge?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w800,
-                                      ),
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w800,
+                                          ),
                                     ),
                                   ),
                                 ],
@@ -200,9 +201,9 @@ class _SplashScreenState extends State<SplashScreen>
                           style: Theme.of(
                             context,
                           ).textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
                         ),
                       ),
                     ),
@@ -216,7 +217,9 @@ class _SplashScreenState extends State<SplashScreen>
                         offset: Offset(0, _slideAnimation.value),
                         child: Text(
                           'Premium PG Discovery Platform',
-                          style: Theme.of(context).textTheme.bodyLarge
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyLarge
                               ?.copyWith(color: Colors.white.withOpacity(0.8)),
                         ),
                       ),

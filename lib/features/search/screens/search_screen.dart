@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shimmer/shimmer.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../providers/search_provider.dart';
 import '../../../shared/widgets/filter_bottom_sheet.dart';
-import '../../../shared/models/app_models.dart';
 import '../../../shared/widgets/pg_card.dart';
 
 class SearchScreen extends StatefulWidget {

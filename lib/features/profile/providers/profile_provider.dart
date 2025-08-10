@@ -1,11 +1,9 @@
 // lib/features/profile/providers/profile_provider.dart
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:image_picker/image_picker.dart';
 
 // Import models and services
 import '../../../shared/models/app_models.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/cache_service.dart';
 

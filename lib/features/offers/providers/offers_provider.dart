@@ -1,6 +1,5 @@
 // lib/features/offers/providers/offers_provider.dart
 import 'package:flutter/foundation.dart';
-import 'package:nearby_pg/features/offers/screens/offers_screen.dart';
 import 'package:nearby_pg/shared/models/app_models.dart';
 
 import '../../../core/services/api_service.dart';
